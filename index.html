@@ -1,0 +1,2055 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>The Way Back</title>
+<meta name="description" content="THE WAY BACK — an interactive cinematic 3D short film about drifting away, and returning to Allah.">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   THE WAY BACK — interface layer
+   The UI is deliberately minimal: thin type, generous space, soft glass.
+   ========================================================================== */
+:root{
+  --gold:#e8cc90; --gold-d:#b8955a; --ink:#f5f0e6; --dim:rgba(245,240,230,.6);
+  --faint:rgba(245,240,230,.28); --line:rgba(245,240,230,.16);
+  --glass:rgba(10,12,20,.42); --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --ar:'Amiri','Scheherazade New',serif;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#000;color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+/* full-screen fades */
+#fade{position:fixed;inset:0;background:#000;pointer-events:none;opacity:1;z-index:5}
+#flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:4;mix-blend-mode:screen;
+  background:radial-gradient(ellipse at 50% 42%,rgba(200,50,255,.55),rgba(255,30,110,.32) 42%,rgba(40,0,80,.65) 80%)}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.35) 100%)}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity 2s ease}
+#hud.on{opacity:1}
+#progress{position:absolute;top:calc(22px + var(--safe-t));left:50%;transform:translateX(-50%);display:flex;gap:6px}
+#progress i{display:block;width:clamp(26px,5vw,54px);height:2px;background:var(--line);border-radius:2px;overflow:hidden;position:relative}
+#progress i b{position:absolute;inset:0;width:0;background:var(--gold);transition:width .25s linear}
+#sceneTag{position:absolute;top:calc(48px + var(--safe-t));left:clamp(18px,4vw,48px);display:flex;align-items:flex-start;gap:14px;
+  opacity:0;transform:translateY(-6px);transition:opacity 1.4s ease,transform 1.4s ease}
+#sceneTag.on{opacity:1;transform:none}
+#sceneNum{font-family:var(--serif);font-weight:300;font-size:clamp(34px,5vw,54px);line-height:.85;color:var(--gold);letter-spacing:.02em}
+#sceneTag div{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+#sceneTitle{font-weight:500;font-size:11px;letter-spacing:.34em;text-transform:uppercase}
+#sceneTheme{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--dim)}
+#caption{position:absolute;top:calc(56px + var(--safe-t));left:50%;transform:translateX(-50%);font-size:10.5px;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--gold);opacity:0;transition:opacity .9s ease;white-space:nowrap;text-shadow:0 1px 12px rgba(0,0,0,.8)}
+#caption.on{opacity:.92}
+#subs{position:absolute;left:50%;bottom:calc(132px + var(--safe-b));transform:translateX(-50%);width:min(760px,90vw);text-align:center;
+  opacity:0;transition:opacity .6s ease;text-shadow:0 2px 14px rgba(0,0,0,.95)}
+#subs.on{opacity:1}
+#subWho{display:block;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+#subText{font-size:clamp(15px,1.7vw,19px);font-weight:400;line-height:1.45}
+#subs.note #subText{font-family:var(--serif);font-style:italic;color:var(--dim);font-size:clamp(16px,1.9vw,21px)}
+#narr{position:absolute;left:50%;bottom:calc(62px + var(--safe-b));transform:translateX(-50%) translateY(8px);width:min(820px,88vw);text-align:center;
+  font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(19px,2.5vw,30px);line-height:1.32;color:var(--ink);
+  opacity:0;transition:opacity 1.6s ease,transform 1.6s ease;text-shadow:0 2px 22px rgba(0,0,0,.9)}
+#narr.on{opacity:1;transform:translateX(-50%)}
+#hint{position:absolute;left:clamp(18px,4vw,48px);bottom:calc(26px + var(--safe-b));font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--faint);transition:opacity 1.2s ease}
+#controls{position:absolute;right:clamp(14px,3.4vw,40px);bottom:calc(18px + var(--safe-b));display:flex;gap:8px;pointer-events:auto}
+#controls button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(8,10,16,.28);backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);display:grid;place-items:center;transition:border-color .3s,background .3s,opacity .3s}
+#controls button:hover{border-color:var(--gold);background:rgba(232,204,144,.08)}
+#controls button:disabled{opacity:.25;cursor:default}
+#controls svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#next.pulse{animation:pulse 2.2s ease-in-out infinite;border-color:var(--gold)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,204,144,.0)}50%{box-shadow:0 0 0 8px rgba(232,204,144,.14)}}
+
+/* ---------- hotspots ---------- */
+#hotspots{position:absolute;inset:0}
+.hs{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:auto;cursor:pointer;opacity:0;transition:opacity .8s ease}
+.hs.on{opacity:1}
+.hs::before,.hs::after{content:'';position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%)}
+.hs::before{width:9px;height:9px;background:rgba(255,236,190,.95);box-shadow:0 0 14px 4px rgba(255,214,140,.55)}
+.hs::after{width:30px;height:30px;border:1px solid rgba(255,230,180,.55);animation:ring 2.6s ease-out infinite}
+@keyframes ring{0%{width:10px;height:10px;opacity:.9}100%{width:44px;height:44px;opacity:0}}
+.hs span{position:absolute;left:34px;top:50%;transform:translateY(-50%);white-space:nowrap;font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--ink);opacity:0;transition:opacity .4s;text-shadow:0 1px 10px #000}
+.hs:hover span,.hs.label span{opacity:.85}
+
+/* ---------- info card ---------- */
+#info{position:absolute;left:50%;top:50%;transform:translate(-50%,-46%);width:min(420px,86vw);padding:26px 28px 24px;border-radius:14px;
+  background:var(--glass);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border:1px solid var(--line);
+  opacity:0;transition:opacity .7s ease,transform .7s ease;pointer-events:none}
+#info.on{opacity:1;transform:translate(-50%,-50%);pointer-events:auto}
+#info h3{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:12px}
+#info p{font-family:var(--serif);font-size:19px;line-height:1.45;color:var(--ink)}
+#info small{display:block;margin-top:16px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+
+/* ---------- phone overlay ---------- */
+#phone{position:absolute;right:clamp(18px,7vw,120px);top:50%;width:270px;transform:translateY(-46%) scale(.96);opacity:0;
+  transition:opacity .8s ease,transform .8s ease;pointer-events:none}
+#phone.on{opacity:1;transform:translateY(-50%)}
+.ph{border-radius:34px;padding:12px;background:linear-gradient(160deg,#1a1d26,#0b0c11);border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.03)}
+.ph-in{border-radius:24px;background:linear-gradient(180deg,#10131b,#0c0e14);height:420px;display:flex;flex-direction:column;overflow:hidden}
+.ph-bar{display:flex;justify-content:space-between;padding:12px 18px 4px;font-size:11px;color:rgba(255,255,255,.75);font-weight:500}
+.ph-top{display:flex;align-items:center;gap:10px;padding:10px 14px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.ph-av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-size:13px;background:linear-gradient(135deg,#3f7a6a,#24494a);color:#e9f5ef}
+.ph-top b{display:block;font-size:13px;font-weight:600}
+.ph-top small{font-size:10.5px;color:rgba(255,255,255,.45)}
+#phMsgs{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:7px;padding:14px 12px 16px}
+.msg{max-width:80%;padding:8px 12px;border-radius:17px;font-size:13.5px;line-height:1.35;animation:pop .35s cubic-bezier(.2,.9,.3,1.3)}
+.msg.me{align-self:flex-end;background:#2f6f61;color:#f1fbf6;border-bottom-right-radius:5px}
+.msg.them{align-self:flex-start;background:#23262f;color:#eceef3;border-bottom-left-radius:5px}
+.msg.sys{align-self:center;background:none;color:rgba(255,255,255,.42);font-size:11px;letter-spacing:.04em;padding:4px}
+.typing{align-self:flex-start;background:#23262f;border-radius:17px;padding:11px 14px;display:flex;gap:4px}
+.typing i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);animation:dot 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+
+/* ---------- final card ---------- */
+#final{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 6vw;gap:6px}
+#final>*{opacity:0;transform:translateY(10px);transition:opacity 2.2s ease,transform 2.2s ease}
+#final .on{opacity:1;transform:none}
+#final .ar{font-family:var(--ar);font-size:clamp(34px,6vw,64px);line-height:1.6;color:var(--gold);text-shadow:0 0 40px rgba(232,204,144,.35)}
+#final .tr{font-family:var(--serif);font-style:italic;font-size:clamp(18px,2.4vw,26px);color:var(--ink)}
+#final .ref{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);max-width:560px;line-height:1.8;margin-top:8px}
+#final h1{font-family:var(--serif);font-weight:300;font-size:clamp(40px,7.5vw,92px);letter-spacing:.24em;margin-top:clamp(26px,6vh,60px);padding-left:.24em}
+#final .tag{font-family:var(--serif);font-style:italic;font-size:clamp(17px,2.2vw,24px);color:var(--dim)}
+#again{margin-top:28px;pointer-events:none;padding:12px 26px;border:1px solid var(--line);border-radius:999px;font-size:10.5px;letter-spacing:.3em;text-transform:uppercase}
+#again.on{pointer-events:auto}
+#again:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ---------- loader ---------- */
+#loader{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;text-align:center;
+  background:radial-gradient(ellipse at 50% 120%,#1d1530 0%,#07080d 55%,#000 100%);transition:opacity 1.8s ease}
+#loader.out{opacity:0;pointer-events:none}
+#loader canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.5}
+#loader .eyebrow{position:relative;font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:26px;padding-left:.5em}
+#loader h1{position:relative;font-family:var(--serif);font-weight:300;font-size:clamp(46px,9vw,112px);letter-spacing:.22em;line-height:1;padding-left:.22em}
+#loader .sub{position:relative;font-family:var(--serif);font-style:italic;font-size:clamp(18px,2.4vw,26px);color:var(--dim);margin-top:20px}
+#loadBar{position:relative;width:160px;height:1px;background:var(--line);margin-top:54px;overflow:hidden}
+#loadBar b{position:absolute;inset:0;width:0;background:var(--gold);transition:width .4s ease}
+#start{position:relative;margin-top:44px;padding:15px 44px;border:1px solid rgba(232,204,144,.5);border-radius:999px;font-size:11px;letter-spacing:.42em;
+  text-transform:uppercase;padding-left:calc(44px + .42em);opacity:0;pointer-events:none;transition:opacity 1s ease,background .4s,border-color .4s,color .4s}
+#start.ready{opacity:1;pointer-events:auto}
+#start:hover{background:rgba(232,204,144,.1);border-color:var(--gold);color:var(--gold)}
+#loader .note{position:absolute;bottom:calc(28px + var(--safe-b));left:0;right:0;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);line-height:2}
+#err{position:relative;margin-top:28px;font-size:13px;color:#e9a;max-width:420px;line-height:1.5;display:none}
+
+@media (max-width:760px){
+  #sceneTag{top:calc(40px + var(--safe-t))} #sceneTitle{font-size:9.5px;letter-spacing:.26em} #sceneTheme{font-size:13px}
+  #caption{top:calc(96px + var(--safe-t));font-size:9.5px;letter-spacing:.22em;white-space:normal;width:88vw;text-align:center}
+  #phone{right:50%;top:auto;bottom:calc(150px + var(--safe-b));transform:translateX(50%) scale(.78);transform-origin:50% 100%}
+  #phone.on{transform:translateX(50%) scale(.8)}
+  .ph-in{height:330px}
+  #subs{bottom:calc(120px + var(--safe-b))}
+  #hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){ .hs::after{animation:none} }
+</style>
+</head>
+<body>
+<div id="vig"></div>
+<div id="flash"></div>
+<div id="fade"></div>
+
+<div id="hud" aria-live="polite">
+  <div id="progress"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+  <div id="sceneTag"><span id="sceneNum">01</span><div><b id="sceneTitle">The Nightclub</b><em id="sceneTheme"></em></div></div>
+  <div id="caption"></div>
+  <div id="hotspots"></div>
+  <div id="subs"><small id="subWho"></small><span id="subText"></span></div>
+  <div id="narr"></div>
+  <div id="hint">Scroll · swipe · or use ← → to move through the film</div>
+  <div id="phone"><div class="ph"><div class="ph-in">
+    <div class="ph-bar"><span id="phTime">2:47</span><span>●●● ▮</span></div>
+    <div class="ph-top"><span class="ph-av" id="phAv">Y</span><div><b id="phName">Yusuf</b><small id="phStatus">online</small></div></div>
+    <div id="phMsgs"></div>
+  </div></div></div>
+  <div id="info"><h3 id="infoT"></h3><p id="infoP"></p><small>Tap anywhere to close</small></div>
+  <div id="final">
+    <p class="ar" dir="rtl" lang="ar">إِنَّ ٱللَّهَ مَعَ ٱلصَّٰبِرِينَ</p>
+    <p class="tr">“Indeed, Allah is with the patient.”</p>
+    <p class="ref">Surah Al-Baqarah 2:153 — “O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.”</p>
+    <h1>THE WAY BACK</h1>
+    <p class="tag">Your journey back to Allah can start today.</p>
+    <button id="again">Watch again</button>
+  </div>
+  <div id="controls">
+    <button id="prev" aria-label="Previous scene"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg></button>
+    <button id="next" aria-label="Next scene"><svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></svg></button>
+    <button id="mute" aria-label="Mute sound"><svg viewBox="0 0 16 16" id="muteIcon"><path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11.5 5.5a3.5 3.5 0 0 1 0 5M13 3.5a6 6 0 0 1 0 9"/></svg></button>
+  </div>
+</div>
+
+<div id="loader">
+  <canvas id="loaderFx"></canvas>
+  <div class="eyebrow">An interactive short film</div>
+  <h1>THE WAY BACK</h1>
+  <p class="sub">“A journey back to where you belong.”</p>
+  <div id="loadBar"><b></b></div>
+  <button id="start">Begin</button>
+  <p id="err"></p>
+  <p class="note">Headphones recommended · Sound is optional<br>Scroll, swipe or tap › to continue · Look for soft glowing points</p>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+/* ==========================================================================
+   THE WAY BACK — an interactive cinematic short film, built entirely in code.
+   Everything (geometry, characters, textures, sound) is procedural.
+
+   Structure
+     0. Utilities
+     1. Renderer, post-processing, sky, global lights
+     2. Procedural textures & material helpers
+     3. Characters (rig, poses, outfits) and the car
+     4. Sets: nightclub, London street, night road, mosque, home + park
+     5. Audio engine (Web Audio, generated ambience only)
+     6. Scenes 01–06: timelines, cameras, narration, interactions
+     7. Director: navigation, transitions, HUD, main loop
+   ========================================================================== */
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ---------------------------------------------------------------- 0. utils */
+const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
+const lerp = (a, b, t) => a + (b - a) * t;
+const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const win = (t, a, b, f = 0.6) => sstep(a, a + f, t) * (1 - sstep(b - f, b, t));
+const easeIO = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeS = t => 0.5 - 0.5 * Math.cos(Math.PI * clamp(t));
+const easeOut = (t, p = 2.4) => 1 - Math.pow(1 - clamp(t), p);
+const TAU = Math.PI * 2, PI = Math.PI, HP = Math.PI / 2;
+function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const R = rng(20251110);
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const C = c => new THREE.Color(c);
+const lerpAngle = (a, b, t) => { let d = ((b - a + PI) % TAU + TAU) % TAU - PI; return a + d * t; };
+
+/* World origins of each set — far apart so they never interfere. */
+const O = { club: V(0, 0, 0), street: V(300, 0, 0), road: V(600, 0, 0), mosque: V(900, 0, 0), home: V(1200, 0, 0), park: V(1200, 0, 70) };
+
+/* ------------------------------------------------------- 1. renderer, post */
+const isMobile = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
+renderer.domElement.id = 'gl';
+document.body.prepend(renderer.domElement);
+let pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+renderer.setPixelRatio(pixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.02);
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 1200);
+scene.add(camera);
+
+const rt = new THREE.WebGLRenderTarget(innerWidth * pixelRatio, innerHeight * pixelRatio, { type: THREE.HalfFloatType, samples: isMobile ? 0 : 4 });
+const composer = new EffectComposer(renderer, rt);
+composer.setPixelRatio(pixelRatio);
+composer.setSize(innerWidth, innerHeight);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.8, 0.6, 0.8);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* Final grade: colour tint, saturation, lift, vignette, edge softness (a
+   depth-of-field-inspired blur towards the frame edges), subtle grain. */
+const grade = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, tint: { value: V(1, 1, 1) }, lift: { value: V(0, 0, 0) },
+    sat: { value: 1 }, vig: { value: 0.5 }, blur: { value: 0.5 }, grain: { value: 0.035 }, res: { value: new THREE.Vector2(innerWidth, innerHeight) } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time,sat,vig,blur,grain; uniform vec3 tint,lift; uniform vec2 res; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+    void main(){
+      vec2 d=vUv-.5; float r=length(d*vec2(res.x/res.y,1.));
+      vec3 c=texture2D(tDiffuse,vUv).rgb;
+      float b=smoothstep(.32,.95,r)*blur;
+      if(b>.001){ vec3 acc=c; vec2 px=b*3.5/res;
+        for(int i=0;i<8;i++){ float a=float(i)*.785398+.3; acc+=texture2D(tDiffuse,vUv+vec2(cos(a),sin(a))*px*(1.+float(i&1))).rgb; }
+        c=acc/9.; }
+      float l=dot(c,vec3(.299,.587,.114)); c=mix(vec3(l),c,sat);
+      c*=tint; c+=lift*(1.-c);
+      c*=1.-vig*smoothstep(.25,1.05,r);
+      c+=(h(vUv*res+fract(time)*91.)-.5)*grain;
+      gl_FragColor=vec4(max(c,0.),1.);
+    }`
+});
+composer.addPass(grade);
+
+/* Environment map — only used on metals/paint/glass for reflections. */
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/* Sky dome: gradient + sun glow + procedural twinkling stars. */
+const skyU = { top: { value: C(0) }, mid: { value: C(0) }, bot: { value: C(0) }, sunDir: { value: V(0, 1, 0) }, sunCol: { value: C(0) },
+  sunAmt: { value: 0 }, stars: { value: 0 }, time: { value: 0 } };
+const sky = new THREE.Mesh(new THREE.SphereGeometry(800, 48, 24), new THREE.ShaderMaterial({
+  uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
+  vertexShader: `varying vec3 vD; void main(){ vD=normalize(position); vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.); gl_Position=p.xyww; }`,
+  fragmentShader: `uniform vec3 top,mid,bot,sunCol,sunDir; uniform float sunAmt,stars,time; varying vec3 vD;
+    float h3(vec3 p){ p=fract(p*.3183099+.1); p*=17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+    void main(){ vec3 d=normalize(vD); float h=d.y;
+      vec3 c=mix(bot,mid,smoothstep(-.12,.06,h)); c=mix(c,top,smoothstep(.06,.62,h));
+      float s=max(dot(d,normalize(sunDir)),0.);
+      c+=sunCol*(pow(s,5.)*.45+pow(s,60.)*.9+smoothstep(.9988,.9996,s)*5.)*sunAmt;
+      if(stars>0.){ vec3 q=d*210.; vec3 i=floor(q); float r=h3(i);
+        if(r>.982){ vec3 f=fract(q)-.5; float st=smoothstep(.16,0.,length(f))*(r-.982)*55.; st*=.55+.45*sin(time*1.7+r*120.);
+          c+=vec3(.9,.95,1.)*st*stars*smoothstep(.02,.3,h); } }
+      gl_FragColor=vec4(c,1.); }`
+}));
+sky.renderOrder = -100; sky.frustumCulled = false; scene.add(sky);
+
+/* Global lights shared by every set; each scene drives their colour/intensity. */
+const hemi = new THREE.HemisphereLight(0xffffff, 0x222222, 0.5); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 1);
+key.castShadow = true;
+key.shadow.mapSize.set(isMobile ? 1024 : 2048, isMobile ? 1024 : 2048);
+Object.assign(key.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 140 });
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.035;
+scene.add(key, key.target);
+const rim = new THREE.DirectionalLight(0xffffff, 0); scene.add(rim, rim.target);
+
+/* ------------------------------------------- 2. textures & material helpers */
+function canvasTex(w, h, draw, o = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = o.linear ? THREE.NoColorSpace : THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = o.clamp ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+  if (o.repeat) t.repeat.set(o.repeat[0], o.repeat[1]);
+  t.anisotropy = maxAniso;
+  return t;
+}
+const radial = (g, x, y, r, stops) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); stops.forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
+function noiseFill(g, w, h, base, amt, n = 6000, r = rng(3)) {
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < n; i++) { const v = (r() - 0.5) * amt; g.fillStyle = v > 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`; g.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); }
+}
+/* Points of an 8-pointed star (khatam) — the backbone of the geometric patterns. */
+function star8(g, cx, cy, r, inner = 0.765) { g.beginPath(); for (let k = 0; k < 16; k++) { const a = k * PI / 8 + PI / 8; const rr = k % 2 ? r * inner : r; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); }
+function geoPattern(g, w, h, n, { bg, star, line, cross, lw = 2 }) {
+  g.fillStyle = bg; g.fillRect(0, 0, w, h); const s = w / n;
+  for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) {
+    const cx = i * s, cy = j * s;
+    star8(g, cx + s / 2, cy + s / 2, s * 0.44); g.fillStyle = star; g.fill(); g.strokeStyle = line; g.lineWidth = lw; g.stroke();
+    star8(g, cx + s / 2, cy + s / 2, s * 0.22); g.strokeStyle = line; g.lineWidth = lw * 0.7; g.stroke();
+    g.save(); g.translate(cx, cy); g.rotate(PI / 4); g.fillStyle = cross; const q = s * 0.17; g.fillRect(-q, -q, q * 2, q * 2); g.strokeStyle = line; g.lineWidth = lw * 0.7; g.strokeRect(-q, -q, q * 2, q * 2); g.restore();
+  }
+  g.strokeStyle = line; g.lineWidth = lw * 0.6; g.globalAlpha = 0.5;
+  for (let i = 0; i <= n; i++) { g.beginPath(); g.moveTo(i * s, 0); g.lineTo(i * s, h); g.moveTo(0, i * s); g.lineTo(w, i * s); g.stroke(); }
+  g.globalAlpha = 1;
+}
+
+const TX = {};
+function buildTextures() {
+  TX.dot = canvasTex(64, 64, g => { g.fillStyle = radial(g, 32, 32, 32, [[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(255,255,255,.4)'], [1, 'rgba(255,255,255,0)']]); g.fillRect(0, 0, 64, 64); }, { linear: true, clamp: true });
+  TX.pool = canvasTex(128, 128, g => { g.fillStyle = radial(g, 64, 64, 64, [[0, 'rgba(255,255,255,.9)'], [0.5, 'rgba(255,255,255,.32)'], [1, 'rgba(255,255,255,0)']]); g.fillRect(0, 0, 128, 128); }, { linear: true, clamp: true });
+  TX.asphalt = canvasTex(512, 512, (g, w, h) => { noiseFill(g, w, h, '#2a2c31', 0.16, 26000); }, { repeat: [20, 2] });
+  TX.road = canvasTex(1024, 256, (g, w, h) => {
+    noiseFill(g, w, h, '#2b2d33', 0.16, 30000);
+    g.fillStyle = 'rgba(235,235,225,.85)'; for (let x = 0; x < w; x += 256) g.fillRect(x + 20, h / 2 - 4, 130, 8);
+    g.fillStyle = 'rgba(230,200,90,.7)'; g.fillRect(0, 10, w, 5); g.fillRect(0, 22, w, 5); g.fillRect(0, h - 15, w, 5); g.fillRect(0, h - 27, w, 5);
+  }, { repeat: [10, 1] });
+  TX.pave = canvasTex(256, 256, (g, w, h) => { noiseFill(g, w, h, '#8c8a86', 0.12, 5000); g.strokeStyle = 'rgba(40,40,40,.55)'; g.lineWidth = 2; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, h); g.moveTo(0, i * 64); g.lineTo(w, i * 64); g.stroke(); } }, { repeat: [30, 1] });
+  TX.clubFloor = canvasTex(512, 512, (g, w, h) => { noiseFill(g, w, h, '#16131c', 0.1, 9000); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 3; for (let i = 0; i <= 8; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, h); g.moveTo(0, i * 64); g.lineTo(w, i * 64); g.stroke(); } }, { repeat: [5, 4] });
+  TX.wood = canvasTex(512, 512, (g, w, h) => { const r = rng(9); for (let i = 0; i < 8; i++) { const c = 120 + r() * 40; g.fillStyle = `rgb(${c},${c * 0.68},${c * 0.43})`; g.fillRect(0, i * 64, w, 64); for (let k = 0; k < 40; k++) { g.strokeStyle = `rgba(60,30,10,${0.05 + r() * 0.12})`; g.beginPath(); const y = i * 64 + r() * 64; g.moveTo(0, y); g.bezierCurveTo(w * 0.3, y + r() * 6 - 3, w * 0.6, y + r() * 6 - 3, w, y); g.stroke(); } g.fillStyle = 'rgba(30,15,5,.5)'; g.fillRect(0, i * 64, w, 2); g.fillRect(r() * w, i * 64, 2, 64); } }, { repeat: [2, 2] });
+  TX.darkWood = canvasTex(256, 256, (g, w, h) => { noiseFill(g, w, h, '#4a2c1a', 0.1, 3000); for (let k = 0; k < 60; k++) { g.strokeStyle = `rgba(20,8,2,${0.1 + R() * 0.2})`; g.beginPath(); const x = R() * w; g.moveTo(x, 0); g.lineTo(x + R() * 8 - 4, h); g.stroke(); } });
+  TX.grass = canvasTex(512, 512, (g, w, h) => { noiseFill(g, w, h, '#5d7a3a', 0.22, 40000, rng(12)); for (let i = 0; i < 2500; i++) { g.fillStyle = `rgba(${150 + R() * 60},${170 + R() * 50},90,.25)`; g.fillRect(R() * w, R() * h, 1, 4); } }, { repeat: [18, 18] });
+  /* courtyard / vestibule — geometric 8-point star tiling */
+  TX.courtyard = canvasTex(512, 512, (g, w, h) => geoPattern(g, w, h, 4, { bg: '#c9bda4', star: '#e2d7c0', line: '#8f7d5e', cross: '#7d9a8a', lw: 3 }), { repeat: [10, 10] });
+  TX.marble = canvasTex(512, 512, (g, w, h) => { noiseFill(g, w, h, '#e9e2d4', 0.07, 8000); g.strokeStyle = 'rgba(150,130,100,.35)'; g.lineWidth = 2; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, h); g.moveTo(0, i * 128); g.lineTo(w, i * 128); g.stroke(); } g.fillStyle = 'rgba(120,150,130,.5)'; for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) { g.save(); g.translate(i * 128, j * 128); g.rotate(PI / 4); g.fillRect(-12, -12, 24, 24); g.restore(); } }, { repeat: [12, 2] });
+  /* prayer carpet: one row of 4 prayer spaces, each with an arch pointing to the qibla (top) */
+  TX.carpet = canvasTex(512, 256, (g, w, h) => {
+    g.fillStyle = '#2f5a46'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 4; i++) {
+      const x = i * 128;
+      g.fillStyle = '#386b53'; g.fillRect(x + 8, 10, 112, h - 20);
+      g.strokeStyle = '#c9a75e'; g.lineWidth = 3; g.strokeRect(x + 8, 10, 112, h - 20);
+      g.beginPath(); g.moveTo(x + 22, 120); g.lineTo(x + 22, 70); g.quadraticCurveTo(x + 22, 26, x + 64, 18); g.quadraticCurveTo(x + 106, 26, x + 106, 70); g.lineTo(x + 106, 120); g.strokeStyle = '#d8b96c'; g.lineWidth = 3; g.stroke();
+      g.fillStyle = '#284c3c'; g.fill();
+      star8(g, x + 64, 66, 16); g.fillStyle = '#c9a75e'; g.fill();
+      g.fillStyle = 'rgba(201,167,94,.6)'; for (let k = 0; k < 5; k++) g.fillRect(x + 30 + k * 16, 170, 6, 6);
+    }
+    g.fillStyle = '#c9a75e'; g.fillRect(0, h - 6, w, 3);
+  }, { repeat: [6.25, 20] });
+  TX.zellige = canvasTex(512, 512, (g, w, h) => {
+    const r = rng(21); const cols = ['#1f6f78', '#2b8a8f', '#e8e0cc', '#195a66', '#d9cba8'];
+    g.fillStyle = '#f1ebde'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) { g.fillStyle = cols[(i + j * 3 + (r() < 0.2 ? 1 : 0)) % cols.length]; g.fillRect(i * 32 + 1.5, j * 32 + 1.5, 29, 29); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(i * 32 + 3, j * 32 + 3, 12, 4); }
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { star8(g, i * 128 + 64, j * 128 + 64, 46); g.fillStyle = '#f3ecdd'; g.fill(); star8(g, i * 128 + 64, j * 128 + 64, 30); g.fillStyle = '#1d6570'; g.fill(); }
+  }, { repeat: [2, 1] });
+  TX.band = canvasTex(512, 128, (g, w, h) => { g.fillStyle = '#efe4cc'; g.fillRect(0, 0, w, h); g.fillStyle = '#b58f4d'; g.fillRect(0, 0, w, 8); g.fillRect(0, h - 8, w, 8); for (let i = 0; i < 4; i++) { star8(g, i * 128 + 64, 64, 44); g.fillStyle = '#3f7363'; g.fill(); g.strokeStyle = '#b58f4d'; g.lineWidth = 4; g.stroke(); star8(g, i * 128 + 64, 64, 22); g.fillStyle = '#d6b46c'; g.fill(); } }, { repeat: [8, 1] });
+  TX.stone = canvasTex(512, 512, (g, w, h) => { noiseFill(g, w, h, '#e6dcc8', 0.06, 9000); g.strokeStyle = 'rgba(140,120,90,.22)'; g.lineWidth = 2; for (let j = 0; j < 8; j++) { g.beginPath(); g.moveTo(0, j * 64); g.lineTo(w, j * 64); g.stroke(); for (let i = 0; i < 4; i++) { const x = i * 128 + (j % 2) * 64; g.beginPath(); g.moveTo(x, j * 64); g.lineTo(x, j * 64 + 64); g.stroke(); } } }, { repeat: [6, 3] });
+  TX.pattern = canvasTex(512, 512, (g, w, h) => geoPattern(g, w, h, 4, { bg: '#efe5cf', star: '#f7efdc', line: '#b8924e', cross: '#5f8f78', lw: 3 }), { repeat: [1, 1] });
+  TX.mihrab = canvasTex(512, 512, (g, w, h) => geoPattern(g, w, h, 3, { bg: '#1f4a3c', star: '#2b604e', line: '#e0bd6e', cross: '#d4ad5c', lw: 4 }), { repeat: [1, 1] });
+  TX.domeIn = canvasTex(512, 512, (g, w, h) => {
+    g.fillStyle = '#f1e6cd'; g.fillRect(0, 0, w, h);
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(184,145,80,.65)'); gr.addColorStop(0.5, 'rgba(184,145,80,.1)'); gr.addColorStop(1, 'rgba(60,100,85,.25)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#b8914e'; g.lineWidth = 6; g.beginPath(); g.moveTo(3, 0); g.lineTo(3, h); g.stroke();
+    for (let j = 0; j < 4; j++) { star8(g, w / 2, 80 + j * 120, 48 - j * 4); g.fillStyle = j % 2 ? '#3f7363' : '#c9a35b'; g.fill(); g.strokeStyle = '#8a6a34'; g.lineWidth = 3; g.stroke(); }
+  }, { repeat: [16, 1] });
+  TX.lattice = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'lighter'; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { star8(g, i * 64 + 32, j * 64 + 32, 26); g.fillStyle = '#fff'; g.fill(); } g.globalCompositeOperation = 'source-over'; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { star8(g, i * 64 + 32, j * 64 + 32, 11); g.fillStyle = '#000'; g.fill(); } }, { repeat: [1, 2] });
+  TX.door = canvasTex(256, 512, (g, w, h) => { noiseFill(g, w, h, '#5a3520', 0.12, 4000); g.strokeStyle = '#2a160b'; g.lineWidth = 5; g.strokeRect(14, 14, w - 28, h - 28); for (let j = 0; j < 4; j++) { star8(g, w / 2, 80 + j * 118, 46); g.strokeStyle = '#c99a55'; g.lineWidth = 4; g.stroke(); star8(g, w / 2, 80 + j * 118, 20); g.fillStyle = '#c99a55'; g.fill(); } g.fillStyle = '#d8b06a'; for (let j = 0; j < 12; j++) { g.beginPath(); g.arc(26, 30 + j * 42, 4, 0, TAU); g.arc(w - 26, 30 + j * 42, 4, 0, TAU); g.fill(); } });
+  TX.quran = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#1e4d3b'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d9b468'; g.lineWidth = 5; g.strokeRect(14, 14, w - 28, h - 28); g.lineWidth = 2; g.strokeRect(24, 24, w - 48, h - 48); star8(g, w / 2, h / 2, 60); g.fillStyle = '#d9b468'; g.fill(); star8(g, w / 2, h / 2, 40); g.fillStyle = '#1e4d3b'; g.fill(); star8(g, w / 2, h / 2, 18); g.fillStyle = '#d9b468'; g.fill(); });
+  TX.page = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#f4ead2'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c29a55'; g.lineWidth = 3; g.strokeRect(16, 16, w - 32, h - 32); g.fillStyle = 'rgba(40,30,20,.55)'; for (let j = 0; j < 13; j++) { let x = w - 30; while (x > 34) { const l = 6 + R() * 22; g.fillRect(x - l, 32 + j * 15, l, 2.2); x -= l + 4 + R() * 4; } } });
+  TX.mat = canvasTex(256, 512, (g, w, h) => { g.fillStyle = '#7a1f2b'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d6b36a'; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20); g.beginPath(); g.moveTo(40, 300); g.lineTo(40, 140); g.quadraticCurveTo(40, 50, 128, 36); g.quadraticCurveTo(216, 50, 216, 140); g.lineTo(216, 300); g.fillStyle = '#5c1520'; g.fill(); g.lineWidth = 4; g.stroke(); star8(g, 128, 140, 30); g.fillStyle = '#d6b36a'; g.fill(); g.fillStyle = '#2f5a46'; g.fillRect(30, 330, w - 60, 140); g.strokeRect(30, 330, w - 60, 140); }, { clamp: true });
+  TX.neon = canvasTex(512, 160, (g, w, h) => { g.clearRect(0, 0, w, h); g.font = '600 104px Inter, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = '#ff3dd8'; g.shadowBlur = 24; g.strokeStyle = '#ff6ae6'; g.lineWidth = 7; g.strokeText('N O V A', w / 2, h / 2 + 4); g.shadowBlur = 8; g.fillStyle = '#ffe6fb'; g.fillText('N O V A', w / 2, h / 2 + 4); }, { clamp: true });
+  TX.shutter = canvasTex(256, 256, (g, w, h) => { noiseFill(g, w, h, '#5a5d63', 0.12, 2000); for (let j = 0; j < 32; j++) { g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, j * 8, w, 2); g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(0, j * 8 + 2, w, 1); } g.fillStyle = 'rgba(255,255,255,.25)'; g.font = 'italic 700 40px Arial'; g.fillText('nova', 70, 140); });
+}
+
+/* Facade textures: colour map + matching emissive map of lit windows. */
+const FACADE = {};
+function buildFacades() {
+  const styles = [
+    { id: 'brick', base: '#6e3a2a', brick: true, frame: '#e7e0d0' },
+    { id: 'stock', base: '#8c7556', brick: true, frame: '#ece6d8' },
+    { id: 'stucco', base: '#d8d0bf', brick: false, frame: '#f4efe4' },
+    { id: 'dark', base: '#3c3a40', brick: true, frame: '#bdb6a8' }];
+  styles.forEach((s, si) => {
+    const r = rng(100 + si); const lit = [];
+    for (let i = 0; i < 16; i++) lit.push(r() < 0.32);
+    const draw = (g, w, h, emissive) => {
+      if (emissive) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
+      else if (s.brick) { g.fillStyle = s.base; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 8) for (let x = -(y / 8 % 2) * 8; x < w; x += 16) { const v = (r() - 0.5) * 26; g.fillStyle = `rgba(${v > 0 ? 255 : 0},${v > 0 ? 230 : 0},${v > 0 ? 200 : 0},${Math.abs(v) / 255})`; g.fillRect(x + 1, y + 1, 14, 6); } }
+      else { noiseFill(g, w, h, s.base, 0.08, 4000, r); g.fillStyle = 'rgba(0,0,0,.08)'; for (let j = 0; j < 4; j++) g.fillRect(0, j * 128 + 118, w, 6); }
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+        const x = i * 128 + 34, y = j * 128 + 22, ww = 60, hh = 84, L = lit[i * 4 + j];
+        if (!emissive) {
+          g.fillStyle = s.frame; g.fillRect(x - 6, y - 6, ww + 12, hh + 12); g.fillRect(x - 10, y + hh + 4, ww + 20, 7);
+          const gr = g.createLinearGradient(x, y, x, y + hh); gr.addColorStop(0, '#202838'); gr.addColorStop(1, '#0d1118');
+          g.fillStyle = L ? '#e8b878' : gr; g.fillRect(x, y, ww, hh);
+          g.fillStyle = s.frame; g.fillRect(x + ww / 2 - 2, y, 4, hh); g.fillRect(x, y + hh * 0.45, ww, 4);
+        } else if (L) {
+          const gr = g.createLinearGradient(x, y, x, y + hh); gr.addColorStop(0, '#ffcf8a'); gr.addColorStop(1, '#ff9e52');
+          g.fillStyle = gr; g.fillRect(x, y, ww, hh); g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x + ww / 2 - 2, y, 4, hh); g.fillRect(x, y + hh * 0.45, ww, 4);
+          if (r() < 0.5) { g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x, y, ww * 0.3, hh); }
+        }
+      }
+    };
+    FACADE[s.id] = { map: canvasTex(512, 512, (g, w, h) => draw(g, w, h, false)), emi: canvasTex(512, 512, (g, w, h) => draw(g, w, h, true)) };
+  });
+}
+const facadeMats = [];
+const facadeCache = new Map();
+function facadeMat(style, rx, ry, ox, oy) {
+  const k = [style, rx, ry, ox, oy].join('|');
+  if (facadeCache.has(k)) return facadeCache.get(k);
+  const f = FACADE[style]; const map = f.map.clone(), emi = f.emi.clone();
+  [map, emi].forEach(t => { t.repeat.set(rx, ry); t.offset.set(ox, oy); t.needsUpdate = true; });
+  const m = new THREE.MeshStandardMaterial({ map, emissiveMap: emi, emissive: 0xffffff, emissiveIntensity: 1.3, roughness: 0.92 });
+  facadeMats.push(m); facadeCache.set(k, m); return m;
+}
+
+/* Material helpers (cached where possible to keep shader programs few). */
+const matCache = new Map();
+function M(color, rough = 0.8, metal = 0, extra) {
+  if (!extra) { const k = `${color}_${rough}_${metal}`; if (matCache.has(k)) return matCache.get(k); const m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal }); if (metal > 0.5) { m.envMap = envTex; m.envMapIntensity = 0.5; } matCache.set(k, m); return m; }
+  return new THREE.MeshStandardMaterial(Object.assign({ color, roughness: rough, metalness: metal }, extra));
+}
+/* Emissive "glow" material: HDR colour so bloom picks it up. */
+function E(color, intensity = 1, extra = {}) { return new THREE.MeshBasicMaterial(Object.assign({ color: C(color).multiplyScalar(intensity) }, extra)); }
+function mesh(geo, mat, parent, x = 0, y = 0, z = 0, cast = true, rec = true) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = rec; if (parent) parent.add(m); return m; }
+const box = (w, h, d, mat, p, x, y, z, cast, rec) => mesh(new THREE.BoxGeometry(w, h, d), mat, p, x, y, z, cast, rec);
+const rbox = (w, h, d, r, mat, p, x, y, z, cast, rec) => mesh(new RoundedBoxGeometry(w, h, d, 3, r), mat, p, x, y, z, cast, rec);
+const cyl = (rt, rb, h, mat, p, x, y, z, seg = 16, cast, rec) => mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat, p, x, y, z, cast, rec);
+const sph = (r, mat, p, x, y, z, ws = 16, hs = 12) => mesh(new THREE.SphereGeometry(r, ws, hs), mat, p, x, y, z);
+function plane(w, h, mat, p, x, y, z, rx = -HP) { const m = mesh(new THREE.PlaneGeometry(w, h), mat, p, x, y, z, false, true); m.rotation.x = rx; return m; }
+
+/* Ground light pool (fake bounce light under lamps) — additive radial decal. */
+function pool(parent, x, z, r, color, op = 0.5, y = 0.03) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2), new THREE.MeshBasicMaterial({ map: TX.pool, color, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.rotation.x = -HP; m.position.set(x, y, z); m.renderOrder = 2; parent.add(m); return m;
+}
+function halo(parent, x, y, z, s, color, op = 0.7) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.dot, color, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sp.position.set(x, y, z); sp.scale.set(s, s, s); parent.add(sp); return sp;
+}
+/* Volumetric light beam: open cone, bright at the apex, soft fresnel edges. */
+function beamMat(color, opacity) {
+  return new THREE.ShaderMaterial({
+    uniforms: { color: { value: C(color) }, opacity: { value: opacity } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    vertexShader: `varying vec2 vUv; varying float vF; void main(){ vUv=uv; vec4 mv=modelViewMatrix*vec4(position,1.); vec3 n=normalize(normalMatrix*normal); vF=abs(dot(n,normalize(-mv.xyz))); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `uniform vec3 color; uniform float opacity; varying vec2 vUv; varying float vF; void main(){ float a=pow(vUv.y,1.5)*pow(vF,1.6)*opacity; gl_FragColor=vec4(color,a); }`
+  });
+}
+function beam(len, radius, color, opacity, top = 0.03, seg = 24) {
+  const g = new THREE.CylinderGeometry(top, radius, len, seg, 1, true); g.translate(0, -len / 2, 0);
+  const m = new THREE.Mesh(g, beamMat(color, opacity)); m.renderOrder = 5; m.frustumCulled = false; return m;
+}
+const DOWN = V(0, -1, 0);
+function aim(obj, dir) { obj.quaternion.setFromUnitVectors(DOWN, dir.clone().normalize()); }
+
+/* Floating particles (dust, haze, pollen). Animated entirely on the GPU. */
+const moteList = [];
+function motes(n, sx, sy, sz, color, size, opacity, speed = 1) {
+  const g = new THREE.BufferGeometry(); const p = new Float32Array(n * 3), s = new Float32Array(n);
+  for (let i = 0; i < n; i++) { p[i * 3] = (R() - 0.5) * sx; p[i * 3 + 1] = R() * sy; p[i * 3 + 2] = (R() - 0.5) * sz; s[i] = R(); }
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('seed', new THREE.BufferAttribute(s, 1));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 }, color: { value: C(color) }, size: { value: size }, opacity: { value: opacity }, pr: { value: pixelRatio }, h: { value: sy }, speed: { value: speed } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    vertexShader: `attribute float seed; uniform float time,size,pr,h,speed; varying float vA;
+      void main(){ vec3 p=position; float t=time*speed;
+        p.x+=sin(t*.31+seed*40.)*.45; p.z+=cos(t*.23+seed*31.)*.45; p.y=mod(p.y+t*.06*(.3+seed),h);
+        vec4 mv=modelViewMatrix*vec4(p,1.); gl_PointSize=size*pr*(140./max(-mv.z,.2))*(.4+seed);
+        vA=(.45+.55*sin(t*1.3+seed*60.))*smoothstep(0.,.12*h,p.y)*(1.-smoothstep(.85*h,h,p.y));
+        gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `uniform vec3 color; uniform float opacity; varying float vA; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,0.,d)*opacity*vA; gl_FragColor=vec4(color,a); }`
+  });
+  const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.renderOrder = 6; moteList.push(mat); return pts;
+}
+/* Flowing water stream material (taps, fountain). */
+const waterMats = [];
+function waterMat(op = 0.75) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 }, op: { value: op } }, transparent: true, depthWrite: false,
+    vertexShader: `varying vec2 vUv; varying float vF; void main(){ vUv=uv; vec4 mv=modelViewMatrix*vec4(position,1.); vF=abs(dot(normalize(normalMatrix*normal),normalize(-mv.xyz))); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `uniform float time,op; varying vec2 vUv; varying float vF; void main(){ float s=.55+.45*sin(vUv.y*46.+time*26.+sin(vUv.x*18.)*2.); float a=(.35+.65*s)*(.4+.6*(1.-vF))*op; gl_FragColor=vec4(vec3(.86,.95,1.)*(1.3+.6*s),a); }`
+  });
+  waterMats.push(m); return m;
+}
+
+/* Pointed (two-centred) Islamic arch outline helpers. */
+function archPts(a, spring, c = 0.5) { // returns {R, cx, ap, thL, thR}
+  const cc = c * a, Rr = a + cc, ap = Math.sqrt(Rr * Rr - cc * cc);
+  return { R: Rr, c: cc, ap, thL: Math.atan2(ap, -cc), thR: Math.atan2(ap, cc), sp: spring };
+}
+/* Solid arch-shaped panel (door, window, niche). */
+function archShape(a, spring, c = 0.5) { const p = archPts(a, spring, c); const s = new THREE.Shape(); s.moveTo(-a, 0); s.lineTo(-a, spring); s.absarc(p.c, spring, p.R, PI, p.thL, true); s.absarc(-p.c, spring, p.R, p.thR, 0, true); s.lineTo(a, 0); s.closePath(); return s; }
+/* Spandrel frame: a rectangle with an arch cut from below (for arcades). */
+function spandrelShape(a, spring, outerA, top, c = 0.5) { const p = archPts(a, spring, c); const s = new THREE.Shape(); s.moveTo(-outerA, spring); s.lineTo(-outerA, top); s.lineTo(outerA, top); s.lineTo(outerA, spring); s.lineTo(a, spring); s.absarc(-p.c, spring, p.R, 0, p.thR, false); s.absarc(p.c, spring, p.R, p.thL, PI, false); s.closePath(); return s; }
+/* Arch ring (decorative trim following the arch curve). */
+function archRingShape(a, spring, t, c = 0.5) {
+  const o = archPts(a + t, spring, (c * a) / (a + t)); const i = archPts(a, spring, c); const s = new THREE.Shape();
+  s.moveTo(-a - t, spring); s.absarc(o.c, spring, o.R, PI, o.thL, true); s.absarc(-o.c, spring, o.R, o.thR, 0, true); s.lineTo(a, spring);
+  s.absarc(-i.c, spring, i.R, 0, i.thR, false); s.absarc(i.c, spring, i.R, i.thL, PI, false); s.closePath(); return s;
+}
+const extrude = (shape, depth) => new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 18 });
+/* Onion / ogee dome profile by lathe. */
+function domeGeo(r, h, seg = 40) {
+  const pts = []; for (let i = 0; i <= 28; i++) { const u = i / 28; const x = r * (1 + 0.12 * Math.sin(u * PI * 1.2)) * Math.pow(Math.max(0, Math.cos(u * HP)), 0.9); pts.push(new THREE.Vector2(Math.max(0.001, x), u * h)); }
+  return new THREE.LatheGeometry(pts, seg);
+}
+
+/* ================================================================
+   3. CHARACTERS
+   A jointed rig built from lathes, capsules and spheres:
+   root → pitch(hip pivot) → hips → {torso → neck → head, shoulders → elbows → wrists}
+                                   {thighs → knees → ankles}
+   Poses are plain objects of joint angles, so they can be blended.
+   Convention: characters face +Z. "X" values = forward swing/lean.
+   ================================================================ */
+const POSE0 = { hipX: 0, hipY: 0.98, hipZ: 0, rootX: 0, spX: 0.02, spY: 0, spZ: 0, nkX: 0, nkY: 0, hdX: 0, hdY: 0, hdZ: 0,
+  lsX: 0, lsZ: 0.13, lsY: 0, leX: 0.16, leZ: 0, lw: 0, rsX: 0, rsZ: 0.13, rsY: 0, reX: 0.16, reZ: 0, rw: 0,
+  lhX: 0, lhZ: 0.03, lk: 0.04, la: 0, rhX: 0, rhZ: 0.03, rk: 0.04, ra: 0,
+  smile: 0, sad: 0, eyeX: 0, eyeY: 0, blink: 0 };
+const P = (o = {}) => Object.assign({}, POSE0, o);
+function mixPose(a, b, t) { if (t <= 0) return a; if (t >= 1) return b; const o = {}; for (const k in a) o[k] = a[k] + (b[k] - a[k]) * t; return o; }
+/* Keep feet planted: hip height & forward offset from thigh/knee angles. */
+const legH = (th, kn) => 0.08 + 0.42 * Math.cos(kn - th) + 0.44 * Math.cos(th) + 0.04;
+const legZ = (th, kn) => -(0.44 * Math.sin(th) - 0.42 * Math.sin(kn - th));
+
+function makeCharacter(o) {
+  const c = { o, blinkT: 1 + R() * 3 };
+  const root = new THREE.Group(); c.root = root;
+  const skin = M(o.skin, 0.62, 0, {});
+  const mats = c.mats = {
+    skin, hair: M(o.hair, 0.75, 0, {}), top: M(o.top, 0.85, 0, { side: THREE.DoubleSide }), bottom: M(o.bottom, 0.9, 0, {}),
+    shoe: M(o.shoe, 0.6, 0, {}), eyeW: M('#f4f0ea', 0.3), pupil: M('#1a120d', 0.25), lip: M(o.lip || '#7a4436', 0.6), accent: M(o.accent || '#e9e4da', 0.8, 0, {})
+  };
+  const pg = new THREE.Group(); root.add(pg); c.pg = pg;
+  const hips = new THREE.Group(); pg.add(hips); c.hips = hips;
+  const pelvis = sph(0.155, mats.bottom, hips, 0, -0.02, 0, 20, 14); pelvis.scale.set(1.05, 0.75, 0.8);
+  const torso = new THREE.Group(); torso.position.y = 0.02; hips.add(torso); c.torso = torso;
+  const prof = [[0, -0.08], [0.15, -0.07], [0.152, 0.02], [0.138, 0.12], [0.148, 0.22], [0.172, 0.34], [0.176, 0.42], [0.158, 0.49], [0.11, 0.53], [0.05, 0.555], [0.001, 0.56]].map(([x, y]) => new THREE.Vector2(x, y));
+  const tm = mesh(new THREE.LatheGeometry(prof, 28), mats.top, torso); tm.scale.set(0.95, 1, 0.68);
+  c.hem = mesh(new THREE.CylinderGeometry(0.152, 0.185, 0.24, 28, 1, true), mats.top, torso, 0, -0.16, 0); c.hem.scale.set(1, 1, 0.78);
+  c.collar = mesh(new THREE.TorusGeometry(0.06, 0.014, 8, 20), mats.top, torso, 0, 0.535, 0.005); c.collar.rotation.x = HP;
+  c.chain = mesh(new THREE.TorusGeometry(0.088, 0.0065, 6, 28), M('#e8c262', 0.25, 1), torso, 0, 0.5, 0.03); c.chain.rotation.x = HP + 0.55;
+  /* neck & head */
+  const neck = new THREE.Group(); neck.position.y = 0.5; torso.add(neck); c.neck = neck;
+  cyl(0.046, 0.054, 0.13, skin, neck, 0, 0.05, 0, 12);
+  const head = new THREE.Group(); head.position.y = 0.1; neck.add(head); c.head = head;
+  const skull = sph(0.118, skin, head, 0, 0.11, 0, 32, 24); skull.scale.set(0.92, 1.04, 1);
+  const jaw = sph(0.09, skin, head, 0, 0.056, 0.024, 24, 16); jaw.scale.set(0.95, 0.84, 1);
+  [-1, 1].forEach(s => { const e = sph(0.028, skin, head, s * 0.106, 0.1, -0.005, 12, 10); e.scale.set(0.45, 1, 0.75); });
+  const nose = sph(0.021, skin, head, 0, 0.083, 0.113, 12, 10); nose.scale.set(0.82, 1, 1.1);
+  c.eyes = [-1, 1].map(s => { const g = new THREE.Group(); g.position.set(s * 0.04, 0.112, 0.101); head.add(g); const w = sph(0.0185, mats.eyeW, g, 0, 0, 0, 14, 10); w.scale.z = 0.62; const p = sph(0.0105, mats.pupil, g, 0, 0, 0.011, 10, 8); p.scale.z = 0.5; return { g, p }; });
+  c.brows = [-1, 1].map(s => { const b = mesh(new RoundedBoxGeometry(0.042, 0.009, 0.012, 2, 0.004), mats.hair, head, s * 0.041, 0.142, 0.107); b.userData.s = s; return b; });
+  c.mouth = mesh(new THREE.TorusGeometry(0.021, 0.0045, 6, 16, PI), mats.lip, head, 0, 0.047, 0.113);
+  /* hair: rounded cap + optional quiff */
+  const cap = mesh(new THREE.SphereGeometry(0.126, 32, 16, 0, TAU, 0, PI * 0.52), mats.hair, head, 0, 0.122, -0.008); cap.scale.set(0.95, 1.02, 1.04); cap.rotation.x = -0.32;
+  if (o.quiff) { const q = sph(0.07, mats.hair, head, 0, 0.215, 0.04, 16, 10); q.scale.set(1.35, 0.55, 1.05); q.rotation.x = 0.35; }
+  if (o.fade) { const f = mesh(new THREE.SphereGeometry(0.121, 28, 12, 0, TAU, PI * 0.42, PI * 0.2), M(o.hair, 0.9, 0, { transparent: true, opacity: 0.55 }), head, 0, 0.11, -0.004); f.scale.set(0.93, 1.03, 1.01); }
+  if (o.beard) {
+    const b = mesh(new THREE.SphereGeometry(0.094, 24, 14, 0, TAU, PI * 0.5, PI * 0.42), mats.hair, head, 0, 0.068, 0.02); b.scale.set(1.02, 1.0, 1.08);
+    const mo = mesh(new RoundedBoxGeometry(0.05, 0.012, 0.016, 2, 0.005), mats.hair, head, 0, 0.063, 0.112); mo.rotation.x = -0.2;
+  }
+  c.kufi = mesh(new THREE.CylinderGeometry(0.108, 0.117, 0.075, 28), mats.accent, head, 0, 0.205, -0.01); c.kufi.rotation.x = -0.18;
+  c.kufi.visible = !!o.kufi;
+  /* arms */
+  c.arm = {}; c.fore = [];
+  [['l', 1], ['r', -1]].forEach(([k, s]) => {
+    const sh = new THREE.Group(); sh.position.set(s * 0.205, 0.45, 0); torso.add(sh);
+    sph(0.058, mats.top, sh, 0, 0, 0, 14, 10);
+    mesh(new THREE.CapsuleGeometry(0.05, 0.2, 6, 12), mats.top, sh, 0, -0.14, 0);
+    const el = new THREE.Group(); el.position.y = -0.29; sh.add(el);
+    const fo = mesh(new THREE.CapsuleGeometry(0.042, 0.19, 6, 12), mats.top, el, 0, -0.12, 0); c.fore.push(fo);
+    const wr = new THREE.Group(); wr.position.y = -0.255; el.add(wr);
+    rbox(0.034, 0.096, 0.078, 0.015, skin, wr, 0, -0.05, 0.004);
+    const th = mesh(new THREE.CapsuleGeometry(0.014, 0.035, 4, 8), skin, wr, -s * 0.004, -0.03, 0.045); th.rotation.x = 0.5;
+    c.arm[k] = { sh, el, wr, s };
+  });
+  /* legs */
+  c.leg = {};
+  [['l', 1], ['r', -1]].forEach(([k, s]) => {
+    const hp = new THREE.Group(); hp.position.set(s * 0.092, -0.04, 0); hips.add(hp);
+    mesh(new THREE.CapsuleGeometry(0.069, 0.3, 6, 12), mats.bottom, hp, 0, -0.21, 0);
+    const kn = new THREE.Group(); kn.position.y = -0.44; hp.add(kn);
+    mesh(new THREE.CapsuleGeometry(0.056, 0.3, 6, 12), mats.bottom, kn, 0, -0.2, 0);
+    const an = new THREE.Group(); an.position.y = -0.42; kn.add(an);
+    rbox(0.1, 0.075, 0.25, 0.03, mats.shoe, an, 0, -0.035, 0.06);
+    c.leg[k] = { hp, kn, an, s };
+  });
+  /* phone held in the right hand */
+  c.phone = new THREE.Group(); c.arm.r.wr.add(c.phone); c.phone.position.set(0.0, -0.075, 0.035); c.phone.rotation.set(0.25, 0, 0);
+  rbox(0.072, 0.15, 0.012, 0.006, M('#121318', 0.3, 0.6), c.phone);
+  c.screen = mesh(new THREE.PlaneGeometry(0.064, 0.135), E('#bcd7ff', 0.8), c.phone, 0, 0, 0.0068, false, false);
+  c.phone.visible = false;
+  root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  c.pose = P();
+  return c;
+}
+function applyPose(c, p, dt = 0) {
+  c.pg.position.y = p.hipY; c.pg.rotation.x = p.rootX;
+  c.hips.position.set(p.hipX, 0, p.hipZ);
+  c.torso.rotation.set(p.spX, p.spY, p.spZ);
+  c.neck.rotation.set(p.nkX, p.nkY * 0.4, 0); c.head.rotation.set(p.hdX, p.hdY + p.nkY * 0.6, p.hdZ);
+  const A = c.arm.l, B = c.arm.r;
+  A.sh.rotation.set(-p.lsX, p.lsY, p.lsZ); A.el.rotation.set(-p.leX, 0, -p.leZ); A.wr.rotation.set(p.lw, 0, 0);
+  B.sh.rotation.set(-p.rsX, -p.rsY, -p.rsZ); B.el.rotation.set(-p.reX, 0, p.reZ); B.wr.rotation.set(p.rw, 0, 0);
+  const L = c.leg.l, Rr = c.leg.r;
+  L.hp.rotation.set(-p.lhX, 0, p.lhZ); L.kn.rotation.x = p.lk; L.an.rotation.x = p.la;
+  Rr.hp.rotation.set(-p.rhX, 0, -p.rhZ); Rr.kn.rotation.x = p.rk; Rr.an.rotation.x = p.ra;
+  /* face: gaze, blinking, brows and mouth */
+  c.blinkT -= dt; let bl = p.blink;
+  if (c.blinkT < 0) { bl = Math.max(bl, 1 - Math.abs(c.blinkT + 0.08) / 0.08); if (c.blinkT < -0.16) c.blinkT = 2 + R() * 4; }
+  c.eyes.forEach(e => { e.p.position.x = clamp(p.eyeX, -1, 1) * 0.0065; e.p.position.y = clamp(p.eyeY, -1, 1) * 0.006; e.g.scale.y = 1 - clamp(bl) * 0.9; });
+  c.brows.forEach(b => { const s = b.userData.s; b.rotation.z = s * (-0.06 + p.sad * 0.32 - p.smile * 0.05); b.position.y = 0.142 + p.sad * 0.004 + p.smile * 0.003; });
+  const k = p.smile - p.sad * 0.7;
+  c.mouth.rotation.z = k >= 0 ? PI : 0; c.mouth.scale.set(1 + k * 0.15, 0.12 + Math.abs(k) * 0.62, 1);
+  c.mouth.position.y = 0.047 + (k < 0 ? -0.006 : 0);
+}
+function setOutfit(c, top, bottom, shoe, { longSleeve = true, hem = false, chain = false } = {}) {
+  c.mats.top.color.set(top); c.mats.bottom.color.set(bottom); c.mats.shoe.color.set(shoe); c.shoeCol = shoe;
+  c.fore.forEach(f => (f.material = longSleeve ? c.mats.top : c.mats.skin));
+  c.hem.visible = false; c.chain.visible = chain; // long tops read through colour; an open hem would show when bowing
+}
+function barefoot(c, on) { c.mats.shoe.color.set(on ? c.o.skin : c.shoeCol); }
+
+/* ---------- procedural pose library ---------- */
+function walkPose(ph, amt = 1, base = POSE0) {
+  const s = Math.sin(ph), c = Math.cos(ph), p = Object.assign({}, base);
+  p.lhX = s * 0.42 * amt; p.rhX = -s * 0.42 * amt;
+  p.lk = 0.07 + (0.85 * Math.max(0, c) + 0.12 * Math.max(0, -s)) * amt;
+  p.rk = 0.07 + (0.85 * Math.max(0, -c) + 0.12 * Math.max(0, s)) * amt;
+  p.la = -0.15 * Math.max(0, s) * amt + 0.2 * Math.max(0, c) * amt; p.ra = -0.15 * Math.max(0, -s) * amt + 0.2 * Math.max(0, -c) * amt;
+  p.lsX = base.lsX - s * 0.34 * amt; p.rsX = base.rsX + s * 0.34 * amt;
+  p.leX = base.leX + 0.18 * amt; p.reX = base.reX + 0.18 * amt;
+  p.hipY = base.hipY - 0.028 * Math.abs(s) * amt + 0.008 * amt; p.spY = s * 0.07 * amt; p.spX = base.spX + 0.04 * amt; p.hipX = s * 0.012 * amt;
+  p.hdY = base.hdY - s * 0.04 * amt;
+  return p;
+}
+function idlePose(t, seed = 0, base = POSE0) {
+  const p = Object.assign({}, base); const b = Math.sin(t * 1.6 + seed);
+  p.spX = base.spX + b * 0.012; p.lsZ = base.lsZ + b * 0.012; p.rsZ = base.rsZ + b * 0.012;
+  p.hdY = base.hdY + Math.sin(t * 0.37 + seed * 3) * 0.06; p.hdX = base.hdX + Math.sin(t * 0.29 + seed) * 0.03;
+  p.eyeX = base.eyeX + Math.sin(t * 0.5 + seed * 2) * 0.3;
+  return p;
+}
+const BPS = 124 / 60; // club tempo
+function dancePose(ph, seed, energy = 1) {
+  const b = ph * BPS * TAU, bounce = Math.abs(Math.sin(b / 2)), st = Math.floor(seed * 4), p = P();
+  const kn = 0.22 + 0.32 * bounce * energy, th = 0.12 + 0.16 * bounce * energy;
+  p.lhX = p.rhX = th; p.lk = p.rk = kn; p.hipY = legH(th, kn); p.hipZ = legZ(th, kn);
+  p.spZ = Math.sin(b / 4 + seed * 9) * 0.1 * energy; p.spY = Math.sin(b / 8 + seed * 5) * 0.25 * energy; p.spX = 0.08 + 0.05 * bounce;
+  p.hdX = 0.05 + bounce * 0.14 * energy; p.hdZ = Math.sin(b / 4) * 0.08;
+  if (st === 0) { p.lsX = p.rsX = 2.3 + Math.sin(b / 2) * 0.35 * energy; p.lsZ = p.rsZ = 0.35; p.leX = p.reX = 0.4; }
+  else if (st === 1) { p.lsX = 0.7 + bounce * 0.4; p.rsX = 0.7 + (1 - bounce) * 0.4; p.leX = p.reX = 1.6; p.leZ = p.reZ = 0.4; }
+  else if (st === 2) { p.rsX = 2.6 + Math.sin(b) * 0.25 * energy; p.rsZ = 0.2; p.reX = 0.3; p.lsX = 0.5; p.leX = 1.4; p.leZ = 0.5; }
+  else { p.lsX = 0.45 + bounce * 0.3; p.rsX = 0.45 + bounce * 0.3; p.lsZ = p.rsZ = 0.5 + bounce * 0.2; p.leX = p.reX = 1.2; }
+  p.smile = 0.6;
+  return p;
+}
+const standArmsDown = { lsX: 0.02, rsX: 0.02, leX: 0.1, reX: 0.1, lsZ: 0.11, rsZ: 0.11 };
+/* Seated on a stool/bench/car seat (hip pivot moves back so the feet stay at the root). */
+function sitPose(extra = {}) { const th = 1.5, kn = 1.48; return P(Object.assign({ lhX: th, rhX: th, lk: kn, rk: kn, la: -0.05, ra: -0.05, hipY: legH(th, kn), hipZ: legZ(th, kn), lsX: 0.55, rsX: 0.55, leX: 0.75, reX: 0.75, leZ: 0.15, reZ: 0.15, lhZ: 0.06, rhZ: 0.06 }, extra)); }
+
+/* --- Salah (prayer) positions — modelled with care for accuracy ---
+   qiyam: standing, right hand over left on the chest/navel, gaze to the place of sujud
+   takbir: hands raised to the ears, palms facing the qibla
+   ruku': back flat, hands gripping the knees
+   i'tidal: upright standing
+   sujud: forehead & nose, both palms, both knees and toes on the ground; elbows raised
+   jalsa / tashahhud: sitting on the left foot, hands on the thighs
+   taslim: turning the head right, then left */
+const SP = {};
+function buildSalahPoses() {
+  SP.itidal = P(Object.assign({ hdX: 0.18, eyeY: -0.6 }, standArmsDown));
+  SP.takbir = P({ lsX: 0.32, rsX: 0.32, lsZ: 0.32, rsZ: 0.32, leX: 2.45, reX: 2.45, leZ: 0.05, reZ: 0.05, lw: 0.15, rw: 0.15, hdX: 0.12, eyeY: -0.5 });
+  SP.qiyam = P({ lsX: 0.22, rsX: 0.26, lsZ: 0.1, rsZ: 0.12, leX: 1.62, reX: 1.72, leZ: 0.62, reZ: 0.68, lw: -0.1, rw: -0.1, hdX: 0.26, eyeY: -0.8 });
+  SP.ruku = P({ spX: 1.48, nkX: -0.05, hdX: -0.02, lsX: 0.78, rsX: 0.78, lsZ: 0.16, rsZ: 0.16, leX: 0.06, reX: 0.06, lw: 0.3, rw: 0.3, lhX: -0.05, rhX: -0.05, hipZ: -0.08, eyeY: -1 });
+  { const th = 0.15, kn = 1.72; SP.sujud = P({ hipY: 0.06 + 0.44 * Math.cos(th) + 0.04, hipZ: -0.28, lhX: th, rhX: th, lk: kn, rk: kn, la: -0.25, ra: -0.25, spX: 2.2, nkX: 0.2, hdX: 0.35, lsX: 2.45, rsX: 2.45, lsZ: 0.42, rsZ: 0.42, leX: 1.25, reX: 1.25, leZ: 0.1, reZ: 0.1, lw: 0.7, rw: 0.7, blink: 0.6, lhZ: 0.08, rhZ: 0.08 }); }
+  { const th = 1.08, kn = 2.66; SP.jalsa = P({ hipY: 0.3, hipZ: -0.2, lhX: th, rhX: th, lk: kn, rk: kn, la: 0.5, ra: -0.1, lhZ: 0.1, rhZ: 0.1, spX: 0.06, hdX: 0.25, eyeY: -0.7, lsX: 0.62, rsX: 0.62, lsZ: 0.12, rsZ: 0.12, leX: 0.62, reX: 0.62, leZ: 0.05, reZ: 0.05, lw: 0.3, rw: 0.3 }); }
+  SP.salR = Object.assign({}, SP.jalsa, { hdY: -1.05, hdX: 0.1, eyeX: -0.8 });
+  SP.salL = Object.assign({}, SP.jalsa, { hdY: 1.05, hdX: 0.1, eyeX: 0.8 });
+  SP.dua = Object.assign({}, SP.jalsa, { lsX: 0.55, rsX: 0.55, lsZ: 0.05, rsZ: 0.05, leX: 1.55, reX: 1.55, leZ: 0.22, reZ: 0.22, lw: -0.9, rw: -0.9, hdX: 0.32, blink: 0.75, eyeY: -0.6 });
+  SP.read = Object.assign({}, SP.jalsa, { lsX: 0.85, rsX: 0.85, leX: 0.95, reX: 0.95, leZ: 0.25, reZ: 0.25, spX: 0.22, hdX: 0.5, eyeY: -0.9 });
+}
+function seqPose(seq, t, fallback) {
+  let acc = 0, prev = fallback;
+  for (let i = 0; i < seq.length; i++) {
+    const s = seq[i];
+    if (t < acc + s.d || i === seq.length - 1) { const tr = Math.min(0.95, s.d * 0.4); return { pose: mixPose(prev, s.p, easeS((t - acc) / tr)), i, local: t - acc, step: s }; }
+    acc += s.d; prev = s.p;
+  }
+  return { pose: fallback, i: 0, local: 0, step: seq[0] };
+}
+
+/* ---------- path walking ---------- */
+function pathPrep(pts) { const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); pts.L = L; return pts; }
+function pathAt(pts, d) {
+  if (!pts.L) pathPrep(pts); const L = pts.L; d = clamp(d, 0, L[L.length - 1]);
+  let i = 1; while (i < L.length - 1 && L[i] < d) i++;
+  const a = pts[i - 1], b = pts[i], u = (d - L[i - 1]) / Math.max(1e-6, L[i] - L[i - 1]);
+  return { x: lerp(a[0], b[0], u), z: lerp(a[1], b[1], u), yaw: Math.atan2(b[0] - a[0], b[1] - a[1]) };
+}
+/* Walk a character along a path between t0 and t1 with eased start/stop.
+   Returns position, yaw, walk-blend amount and gait phase. */
+function walkOn(pts, t0, t1, t) {
+  if (!pts.L) pathPrep(pts); const total = pts.L[pts.L.length - 1];
+  const u = clamp((t - t0) / (t1 - t0)), acc = 0.12;
+  const f = x => { if (x < acc) return x * x / (2 * acc * (1 - acc)); if (x > 1 - acc) return 1 - (1 - x) * (1 - x) / (2 * acc * (1 - acc)); return (x - acc / 2) / (1 - acc); };
+  const d = f(u) * total, q = pathAt(pts, d), q2 = pathAt(pts, Math.min(total, d + 0.2));
+  const speed = u <= 0 || u >= 1 ? 0 : (f(Math.min(1, u + 0.01)) - f(Math.max(0, u - 0.01))) / 0.02 * total / (t1 - t0);
+  return { x: q.x, z: q.z, yaw: d < total - 0.05 ? Math.atan2(q2.x - q.x, q2.z - q.z) : q.yaw, amt: clamp(speed / 1.3), ph: d / 1.45 * TAU, moving: u > 0 && u < 1 };
+}
+function place(c, origin, x, z, yaw, y = 0) { c.root.position.set(origin.x + x, origin.y + y, origin.z + z); c.root.rotation.set(0, yaw, 0); }
+
+/* ================================================================ THE CAR
+   Built facing +X. Lower body extruded from a side profile, glass
+   greenhouse (transparent so silhouettes read), interior, wheels, lights. */
+function makeCar(color, withBeams = false) {
+  const g = new THREE.Group(); const car = { g, wheels: [] };
+  const paint = M(color, 0.32, 0.55, { envMap: envTex, envMapIntensity: 0.55 });
+  const s = new THREE.Shape();
+  s.moveTo(-2.2, 0.32); s.lineTo(-2.26, 0.72); s.quadraticCurveTo(-2.22, 0.96, -1.9, 0.99); s.lineTo(1.25, 1.01); s.lineTo(2.02, 0.88);
+  s.quadraticCurveTo(2.3, 0.82, 2.28, 0.55); s.lineTo(2.22, 0.32); s.closePath();
+  const bodyG = new THREE.ExtrudeGeometry(s, { depth: 1.62, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.06, bevelSegments: 4, curveSegments: 12 }); bodyG.translate(0, 0, -0.81);
+  mesh(bodyG, paint, g);
+  const gs = new THREE.Shape(); gs.moveTo(-1.5, 1.0); gs.lineTo(-1.02, 1.38); gs.lineTo(0.38, 1.38); gs.lineTo(1.22, 1.0); gs.closePath();
+  const glassG = new THREE.ExtrudeGeometry(gs, { depth: 1.56, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.03, bevelSegments: 2 }); glassG.translate(0, 0, -0.78);
+  car.glass = mesh(glassG, M('#0b1220', 0.06, 0.7, { transparent: true, opacity: 0.5, envMap: envTex, envMapIntensity: 0.9, depthWrite: false }), g, 0, 0, 0, false, false);
+  box(1.42, 0.05, 1.6, paint, g, -0.32, 1.41, 0);
+  [-0.79, 0.79].forEach(z => { box(0.08, 0.38, 0.05, paint, g, -0.28, 1.2, z); const a = box(0.07, 0.48, 0.05, paint, g, 0.82, 1.18, z); a.rotation.z = 0.86; const b = box(0.07, 0.46, 0.05, paint, g, -1.28, 1.2, z); b.rotation.z = -0.68; });
+  const tire = M('#111113', 0.85), rimM = M('#b8bcc4', 0.25, 1);
+  [[1.38, 0.82], [1.38, -0.82], [-1.38, 0.82], [-1.38, -0.82]].forEach(([x, z]) => {
+    const w = new THREE.Group(); w.position.set(x, 0.34, z); g.add(w);
+    const t = cyl(0.34, 0.34, 0.24, tire, w, 0, 0, 0, 22); t.rotation.x = HP;
+    const r2 = cyl(0.21, 0.21, 0.25, rimM, w, 0, 0, 0, 12); r2.rotation.x = HP;
+    for (let k = 0; k < 5; k++) { const sp = box(0.05, 0.36, 0.02, rimM, w, 0, 0, Math.sign(z) * 0.13); sp.rotation.z = k * TAU / 5; }
+    car.wheels.push(w);
+  });
+  car.headMat = E('#fff6e2', 4); car.tailMat = E('#ff2030', 2.5);
+  [-0.6, 0.6].forEach(z => { rbox(0.08, 0.13, 0.36, 0.03, car.headMat, g, 2.27, 0.7, z, false, false); rbox(0.06, 0.12, 0.34, 0.03, car.tailMat, g, -2.27, 0.78, z, false, false); });
+  rbox(0.06, 0.16, 0.8, 0.03, M('#0a0a0c', 0.5), g, 2.3, 0.52, 0);
+  /* interior */
+  const seat = M('#1d1d22', 0.9);
+  [[-0.25, 0.42], [-0.25, -0.42], [-1.2, 0.42], [-1.2, -0.42]].forEach(([x, z]) => { rbox(0.5, 0.14, 0.5, 0.05, seat, g, x, 0.55, z); const b = rbox(0.12, 0.62, 0.5, 0.05, seat, g, x - 0.28, 0.9, z); b.rotation.z = -0.12; });
+  box(0.5, 0.25, 1.5, M('#121216', 0.7), g, 1.0, 0.95, 0);
+  const wheelR = mesh(new THREE.TorusGeometry(0.17, 0.022, 8, 24), M('#0c0c0e', 0.5), g, 0.62, 1.02, 0.42); wheelR.rotation.y = HP; wheelR.rotation.x = 0.4;
+  car.dash = mesh(new THREE.PlaneGeometry(0.22, 0.07), E('#7fb6ff', 1.2), g, 0.76, 1.06, 0.42, false, false); car.dash.rotation.y = -HP + 0.3;
+  if (withBeams) {
+    car.spot = new THREE.SpotLight(0xfff1d6, 60, 40, 0.55, 0.6, 2); car.spot.position.set(2.3, 0.75, 0); car.spot.target.position.set(12, 0, 0); g.add(car.spot, car.spot.target);
+    car.beams = [-0.6, 0.6].map(z => { const b = beam(9, 1.6, '#fff0d0', 0.14, 0.12); b.position.set(2.32, 0.7, z); aim(b, V(1, -0.12, 0)); g.add(b); return b; });
+  }
+  g.traverse(m => { if (m.isMesh && m !== car.glass) { m.castShadow = true; } });
+  car.setLights = on => { car.headMat.color.set('#fff6e2').multiplyScalar(on ? 4 : 0.6); if (car.spot) { car.spot.intensity = on ? 60 : 0; car.beams.forEach(b => (b.visible = on)); } };
+  car.spin = d => car.wheels.forEach(w => (w.rotation.z = -d / 0.34));
+  return car;
+}
+
+/* ================================================================
+   4. SETS
+   Each set is a THREE.Group at its own world origin. Only the set(s)
+   used by the current shot are visible (keeps draw calls & lights low).
+   ================================================================ */
+const SETS = {};
+const crowdOutfits = [['#c23b6b', '#1e1e26', '#f0f0f0'], ['#2a7de1', '#1a2230', '#eeeeee'], ['#f2c14e', '#2b2b2b', '#222222'], ['#7e3fd1', '#33304a', '#e8e8e8'],
+  ['#e9e3d6', '#3a4a6a', '#a33'], ['#18a999', '#202020', '#fff'], ['#e25b3a', '#2a2a35', '#222'], ['#cfd2d8', '#141418', '#e5e5e5'], ['#ff7ac8', '#1d1d2a', '#fff'], ['#5b6b3a', '#26262c', '#ddd'], ['#262a36', '#7a5c3a', '#eee']];
+const skinTones = ['#e2b391', '#c68863', '#9a6142', '#6e4129', '#f0c8a8', '#b47a54', '#83523a'];
+const hairTones = ['#16110e', '#2b1d14', '#5a3a22', '#0e0b0a', '#a8742f'];
+
+/* ---------------------------------------------------------- NIGHTCLUB */
+function buildClub() {
+  const G = new THREE.Group(); G.position.copy(O.club); scene.add(G);
+  const S = { G, heads: [], dancers: [], spots: [] };
+  const floor = plane(32, 26, M('#ffffff', 0.32, 0.35, { map: TX.clubFloor, envMap: envTex, envMapIntensity: 0.12 }), G, 0, 0, 0); floor.receiveShadow = true;
+  const wallM = M('#16121e', 0.9), wallM2 = M('#0d0b12', 0.95);
+  box(32, 7.5, 0.4, wallM, G, 0, 3.75, -11.2); box(0.4, 7.5, 26, wallM, G, -15.2, 3.75, 1.5); box(0.4, 7.5, 26, wallM, G, 15.2, 3.75, 1.5); box(32, 7.5, 0.4, wallM2, G, 0, 3.75, 14);
+  box(32, 0.3, 26, M('#09080c', 1), G, 0, 7.45, 1.5, false);
+  /* acoustic wall panels & neon strips */
+  const neonA = E('#7a3cff', 2.4), neonB = E('#ff2e8a', 2.2), neonC = E('#2ec8ff', 2.0);
+  for (let x = -13; x <= 13; x += 2.6) { rbox(2.2, 4.2, 0.12, 0.05, M('#1d1828', 0.75), G, x, 3.3, -10.95); box(0.06, 4.6, 0.05, (Math.round(x) % 2 ? neonA : neonC), G, x + 1.3, 3.3, -10.85, false, false); }
+  for (let z = -9; z <= 11; z += 2.6) { box(0.05, 4.6, 0.06, neonA, G, -14.95, 3.3, z, false, false); box(0.05, 4.6, 0.06, neonB, G, 14.95, 3.3, z, false, false); }
+  box(30, 0.06, 0.06, neonB, G, 0, 6.2, -10.85, false, false);
+  /* LED dance floor (instanced, colours animated per beat) */
+  const tiles = new THREE.InstancedMesh(new RoundedBoxGeometry(1.0, 0.05, 1.0, 2, 0.02), new THREE.MeshBasicMaterial({ color: 0xffffff }), 81);
+  const m4 = new THREE.Matrix4(); let n = 0;
+  for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) { m4.makeTranslation((i - 4) * 1.04, 0.026, (j - 4) * 1.04 - 0.3); tiles.setMatrixAt(n, m4); tiles.setColorAt(n++, C('#000')); }
+  G.add(tiles); S.tiles = tiles;
+  /* DJ booth, speakers */
+  rbox(4.2, 1.25, 1.3, 0.08, M('#121018', 0.5, 0.3), G, 0, 0.62, -8.6);
+  box(4.0, 0.08, 0.05, neonB, G, 0, 0.95, -7.93, false, false); box(4.0, 0.05, 0.05, neonC, G, 0, 0.35, -7.93, false, false);
+  [-1.1, 1.1].forEach(x => { const d = cyl(0.32, 0.32, 0.06, M('#222', 0.4, 0.5), G, x, 1.29, -8.6, 24); halo(G, x, 1.35, -8.6, 0.5, '#5ad1ff', 0.35); });
+  rbox(0.5, 0.04, 0.35, 0.02, E('#9bd3ff', 1.4), G, 0, 1.3, -8.7, false, false);
+  [-4.2, 4.2].forEach(x => { rbox(1.4, 3.2, 1.1, 0.06, M('#0c0c10', 0.6), G, x, 1.6, -9.4); [0.7, 1.8, 2.7].forEach(y => { const sp = cyl(0.38, 0.38, 0.05, M('#1c1c22', 0.5, 0.2), G, x, y, -8.84, 24); sp.rotation.x = HP; }); });
+  /* bar with backlit shelves */
+  rbox(1.2, 1.15, 11, 0.08, M('#1a1110', 0.4, 0.2), G, -12.2, 0.58, -1);
+  box(1.3, 0.06, 11.1, M('#2a1c18', 0.15, 0.6, { envMap: envTex, envMapIntensity: 0.4 }), G, -12.2, 1.18, -1);
+  box(0.05, 0.05, 11, neonB, G, -11.58, 0.1, -1, false, false);
+  box(0.1, 3, 11, E('#ff9a56', 0.55), G, -15.0, 2.8, -1, false, false);
+  const bottles = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.06, 0.07, 0.32, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }), 72);
+  n = 0; for (let row = 0; row < 3; row++) for (let k = 0; k < 24; k++) { m4.makeTranslation(-14.75, 1.75 + row * 0.8, -6 + k * 0.43); bottles.setMatrixAt(n, m4); bottles.setColorAt(n++, C(['#7cffb0', '#ffb347', '#ff5d8f', '#a3d8ff', '#ffe27a'][(k + row) % 5]).multiplyScalar(0.9)); }
+  G.add(bottles);
+  [1.6, 2.4, 3.2].forEach(y => box(0.5, 0.04, 11, M('#2a2a2e', 0.3, 0.8), G, -14.75, y, -1));
+  for (let k = 0; k < 4; k++) { const st = new THREE.Group(); st.position.set(-11.2, 0, -4.5 + k * 2.2); G.add(st); cyl(0.22, 0.22, 0.07, M('#5a0f22', 0.8), st, 0, 0.8, 0, 16); cyl(0.04, 0.04, 0.8, M('#888', 0.3, 0.9), st, 0, 0.4, 0, 8); }
+  /* sofas and tables */
+  const velvet = M('#4d0d1f', 0.95);
+  [-6, -1.5, 3].forEach((z, i) => {
+    rbox(1.0, 0.45, 3.2, 0.12, velvet, G, 13.8, 0.25, z); rbox(0.3, 0.9, 3.2, 0.12, velvet, G, 14.4, 0.6, z);
+    cyl(0.5, 0.5, 0.06, M('#1a1a1f', 0.2, 0.6), G, 12.4, 0.55, z, 24); cyl(0.07, 0.12, 0.5, M('#111', 0.4, 0.6), G, 12.4, 0.27, z, 10);
+    box(0.06, 0.1, 0.06, E('#ffb060', 4), G, 12.4, 0.63, z, false, false); halo(G, 12.4, 0.68, z, 0.5, '#ffaa55', 0.6);
+  });
+  /* truss, moving heads with visible beams, mirror ball */
+  const truss = M('#3a3a42', 0.4, 0.8);
+  [-3.5, 3.5].forEach(z => box(26, 0.22, 0.22, truss, G, 0, 6.6, z));
+  const beamCols = ['#b04bff', '#ff2e7a', '#3a7bff', '#ff2e7a', '#b04bff', '#3a7bff'];
+  [[-7, -3.5], [-2.5, -3.5], [2.5, -3.5], [7, -3.5], [-4.5, 3.5], [4.5, 3.5]].forEach(([x, z], i) => {
+    const h = new THREE.Group(); h.position.set(x, 6.4, z); G.add(h);
+    rbox(0.35, 0.3, 0.35, 0.06, M('#151518', 0.4, 0.6), h, 0, 0.05, 0);
+    const b = beam(8.5, 1.15, beamCols[i], 0.22, 0.09); h.add(b);
+    let sp = null;
+    if (i < 4) { sp = new THREE.SpotLight(beamCols[i], 160, 22, 0.24, 0.5, 1.6); sp.position.set(x, 6.3, z); sp.target.position.set(x, 0, z); G.add(sp, sp.target); }
+    S.heads.push({ h, b, sp, x, z, i, col: C(beamCols[i]) });
+  });
+  const ball = sph(0.45, M('#dfe3ea', 0.12, 1, { flatShading: true, envMap: envTex, envMapIntensity: 2.2 }), G, 0, 6.0, -0.3, 18, 12); S.ball = ball;
+  cyl(0.01, 0.01, 1.2, truss, G, 0, 6.8, -0.3, 4);
+  S.lasers = []; for (let i = 0; i < 6; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 18, 4), E(i % 2 ? '#ff2040' : '#30ff9a', 3, { transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); l.geometry.translate(0, 9, 0); l.position.set(0, 1.4, -8.8); G.add(l); S.lasers.push(l); }
+  /* warm & purple practicals */
+  const barL = new THREE.PointLight('#ff5a3c', 14, 14, 2); barL.position.set(-11.5, 3, -1); G.add(barL);
+  const sofaL = new THREE.PointLight('#8a2cff', 12, 14, 2); sofaL.position.set(12, 3, -1.5); G.add(sofaL);
+  const djL = new THREE.PointLight('#2e7bff', 10, 12, 2); djL.position.set(0, 2.5, -7); G.add(djL);
+  S.practicals = [barL, sofaL, djL];
+  /* the main character's separating rim light */
+  S.mcRim = new THREE.SpotLight('#cfe0ff', 0, 10, 0.32, 0.7, 2); S.mcRim.position.set(-1.6, 4.5, -2.6); G.add(S.mcRim, S.mcRim.target);
+  S.mcRim.target.position.set(0, 1.3, 1.2);
+  G.add(motes(700, 28, 7, 22, '#c29aff', 1.6, 0.16, 0.8));
+  S.haze = G.children[G.children.length - 1];
+  /* crowd */
+  const spots = [[-1.7, 0.4], [1.6, 1.9], [-0.9, -1.8], [2.3, -1.0], [-2.6, 2.4], [0.8, -3.2], [-3.4, -0.9], [3.6, 2.6], [-2.2, -3.6], [3.1, -3.4], [0.2, 3.6]];
+  spots.forEach(([x, z], i) => {
+    const o = crowdOutfits[i % crowdOutfits.length];
+    const c = makeCharacter({ skin: skinTones[i % skinTones.length], hair: hairTones[i % hairTones.length], top: o[0], bottom: o[1], shoe: o[2], quiff: i % 3 === 0 });
+    setOutfit(c, o[0], o[1], o[2], { longSleeve: i % 2 === 0 });
+    c.root.position.set(O.club.x + x, 0, O.club.z + z); c.root.rotation.y = Math.atan2(-x, -z + 1) + (R() - 0.5) * 1.2; G.add(c.root);
+    // put root into club group's coordinate system
+    c.root.position.set(x, 0, z);
+    S.dancers.push({ c, seed: R(), x, z, ph: R() * 10, energy: 0.75 + R() * 0.5 });
+  });
+  const dj = makeCharacter({ skin: '#c68863', hair: '#111', top: '#0f0f12', bottom: '#111', shoe: '#111' }); setOutfit(dj, '#0f0f12', '#18181c', '#111');
+  dj.root.position.set(0, 0, -9.6); G.add(dj.root); S.dj = dj;
+  return S;
+}
+function updateClub(S, ph, t, dim) {
+  const beat = ph * BPS, b = beat % 1, kick = Math.pow(1 - b, 3);
+  const live = 1 - dim * 0.82;
+  /* LED floor patterns (cycled every 8 beats) */
+  const pal = [C('#ff2e8a'), C('#7a3cff'), C('#2ec8ff'), C('#ff6a2e')]; const pat = Math.floor(beat / 8) % 3; const tc = new THREE.Color();
+  let n = 0;
+  for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) {
+    let v, ci;
+    if (pat === 0) { const d = Math.hypot(i - 4, j - 4); v = 0.5 + 0.5 * Math.sin(d * 1.3 - beat * PI); ci = Math.floor(d + beat / 2) % 4; }
+    else if (pat === 1) { v = ((i + j + Math.floor(beat)) % 3 === 0) ? 1 : 0.12; ci = (i + Math.floor(beat / 2)) % 4; }
+    else { v = 0.5 + 0.5 * Math.sin(i * 0.9 + beat * 1.4) * Math.cos(j * 0.7 - beat); ci = (j + Math.floor(beat)) % 4; }
+    tc.copy(pal[ci]).multiplyScalar((0.15 + v * (1.1 + kick * 0.9)) * live * 0.9);
+    S.tiles.setColorAt(n++, tc);
+  }
+  S.tiles.instanceColor.needsUpdate = true;
+  /* moving heads sweep in figure-8s, slowing down with the realisation */
+  S.heads.forEach(H => {
+    const a = ph * 0.55 + H.i * 1.3; const dir = V(Math.sin(a) * 0.6 + Math.sin(a * 0.37) * 0.3, -1, Math.cos(a * 0.8 + H.i) * 0.5 + 0.15).normalize();
+    aim(H.b, dir); H.b.material.uniforms.opacity.value = 0.22 * live * (0.75 + kick * 0.35);
+    H.b.material.uniforms.color.value.copy(H.col).lerp(C('#9aa7c4'), dim * 0.6);
+    if (H.sp) { H.sp.target.position.set(H.x + dir.x * 7, 0, H.z + dir.z * 7); H.sp.intensity = 160 * live * (0.7 + kick * 0.4); H.sp.color.copy(H.col).lerp(C('#8090b0'), dim * 0.5); }
+  });
+  S.lasers.forEach((l, i) => { l.rotation.z = Math.sin(ph * 0.9 + i) * 0.8 + (i - 2.5) * 0.18; l.rotation.x = -0.9 + Math.sin(ph * 0.6 + i * 2) * 0.25; l.material.opacity = (Math.floor(beat) % 4 < 2 ? 0.55 : 0.0) * live; });
+  S.ball.rotation.y = t * 0.4;
+  S.practicals.forEach((p, i) => (p.intensity = [14, 12, 10][i] * (0.35 + 0.65 * live) * (1 + kick * 0.15 * live)));
+  S.dancers.forEach(d => { applyPose(d.c, dancePose(ph + d.ph, d.seed, d.energy * (1 - dim * 0.55)), 0.016); });
+  applyPose(S.dj, Object.assign(dancePose(ph, 0.3, 0.5), { lsX: 1.0, rsX: 1.0, leX: 1.2, reX: 1.2, hdX: 0.3 + kick * 0.1 }), 0.016);
+}
+
+/* --------------------------------------------------- LONDON STREET (S2, S3a, S6) */
+function building(G, x, z, w, h, d, style, facing) {
+  const fm = facadeMat(style, +(w / 14).toFixed(2), +(h / 14).toFixed(2), (Math.round(x) % 2) * 0.5, 0);
+  const b = box(w, h, d, fm, G, x, h / 2, z);
+  const trim = M(style === 'stucco' ? '#efe9dc' : '#d8d2c4', 0.85);
+  box(w + 0.2, 0.35, d + 0.2, trim, G, x, h + 0.05, z);
+  if (R() < 0.6) { const cx = x + (R() - 0.5) * w * 0.6; box(0.7, 1.1, 0.5, M('#5a3528', 0.9), G, cx, h + 0.7, z); for (let k = 0; k < 3; k++) cyl(0.07, 0.08, 0.3, M('#8a4a30', 0.9), G, cx - 0.22 + k * 0.22, h + 1.4, z, 8); }
+  return b;
+}
+function buildMiniMosque(G, x, z, yaw, s = 1) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; g.scale.setScalar(s); G.add(g);
+  const stone = M('#ffffff', 0.85, 0, { map: TX.stone }), dome = M('#6f9a86', 0.4, 0.35, { envMap: envTex, envMapIntensity: 0.4 }), gold = M('#d8b46a', 0.3, 1);
+  box(14, 6, 12, stone, g, 0, 3, 0); box(14.4, 0.4, 12.4, M('#d9cdb4', 0.8), g, 0, 6.2, 0);
+  cyl(3.6, 3.6, 1.6, stone, g, 0, 7.2, -0.5, 32);
+  mesh(domeGeo(3.9, 5.2), dome, g, 0, 8, -0.5);
+  cyl(0.05, 0.05, 1.2, gold, g, 0, 13.6, -0.5, 6); const cr = mesh(new THREE.TorusGeometry(0.32, 0.06, 6, 16, PI * 1.4), gold, g, 0, 14.4, -0.5); cr.rotation.z = -0.5;
+  const mn = new THREE.Group(); mn.position.set(5.6, 0, 4.6); g.add(mn);
+  cyl(0.75, 0.85, 15, stone, mn, 0, 7.5, 0, 16); cyl(1.15, 1.15, 0.35, M('#d9cdb4', 0.8), mn, 0, 12, 0, 16); cyl(0.55, 0.6, 3, stone, mn, 0, 16.5, 0, 16);
+  mesh(domeGeo(0.7, 1.8, 16), dome, mn, 0, 18, 0); cyl(0.03, 0.03, 0.8, gold, mn, 0, 20.1, 0, 6);
+  const ringM = E('#7dffc0', 1.4); const ring = mesh(new THREE.TorusGeometry(1.17, 0.04, 6, 32), ringM, mn, 0, 12.2, 0, false, false); ring.rotation.x = HP;
+  const portal = new THREE.Group(); portal.position.set(0, 0, 6); g.add(portal);
+  box(5, 7.2, 0.9, stone, portal, 0, 3.6, 0.2);
+  const doorGlow = E('#ffcf8a', 1.2); const door = mesh(new THREE.ShapeGeometry(archShape(1.1, 2.2)), doorGlow, portal, 0, 0, 0.67, false, false);
+  const frame = mesh(extrude(archRingShape(1.1, 2.2, 0.22), 0.1), gold, portal, 0, 0, 0.66);
+  const arch2 = mesh(extrude(archRingShape(1.9, 4.2, 0.18), 0.1), M('#cdbf9f', 0.8), portal, 0, 0, 0.66);
+  const lampM = E('#ffd9a0', 3);
+  [-1.8, 1.8].forEach(lx => { box(0.22, 0.4, 0.22, lampM, portal, lx, 2.6, 0.8, false, false); });
+  const wins = E('#ffcf8a', 0.9);
+  for (let k = -2; k <= 2; k++) { mesh(new THREE.ShapeGeometry(archShape(0.45, 1.3)), wins, g, k * 2.4, 2.0, 6.01, false, false); }
+  for (let k = -2; k <= 2; k++) { const w = mesh(new THREE.ShapeGeometry(archShape(0.45, 1.3)), wins, g, -7.01, 2.0, k * 2.2, false, false); w.rotation.y = -HP; }
+  const light = new THREE.PointLight('#ffcf8a', 0, 12, 2); light.position.set(0, 2.6, 7.6); g.add(light);
+  return { g, doorGlow, wins, ringM, light, lampM };
+}
+function buildStreet() {
+  const G = new THREE.Group(); G.position.copy(O.street); scene.add(G);
+  const S = { G, lamps: [] };
+  const roadM = M('#ffffff', 0.38, 0.08, { map: TX.road.clone(), envMap: envTex, envMapIntensity: 0.08 }); roadM.map.repeat.set(12, 1); roadM.map.needsUpdate = true;
+  const road = plane(112, 8, roadM, G, -18, 0, 0); road.receiveShadow = true;
+  const paveM = M('#ffffff', 0.7, 0, { map: TX.pave.clone() }); paveM.map.repeat.set(28, 1); paveM.map.needsUpdate = true;
+  box(112, 0.16, 3.5, paveM, G, -18, 0.08, 5.75); box(112, 0.16, 3.5, paveM, G, -18, 0.08, -5.75);
+  box(112, 0.18, 0.2, M('#a7a49c', 0.7), G, -18, 0.09, 4.05); box(112, 0.18, 0.2, M('#a7a49c', 0.7), G, -18, 0.09, -4.05);
+  const plazaM = M('#ffffff', 0.8, 0, { map: TX.courtyard.clone() }); plazaM.map.repeat.set(6, 8); plazaM.map.needsUpdate = true;
+  box(26, 0.16, 32, plazaM, G, 51, 0.08, 0);
+  box(0.4, 0.9, 12, M('#cbbf9f', 0.85), G, 38.4, 0.45, -10); box(0.4, 0.9, 12, M('#cbbf9f', 0.85), G, 38.4, 0.45, 10);
+  /* terraced buildings */
+  const styles = ['brick', 'stock', 'stucco', 'brick', 'dark', 'stock'];
+  let si = 0;
+  for (let x = -70; x <= 34; x += 7) { if (x > -5 && x < 8) continue; const h = [10.5, 14, 10.5, 12.25][(si) % 4]; building(G, x + 3.5, 11.5, 7, h, 8, styles[si++ % styles.length]); }
+  for (let x = -70; x <= 34; x += 7) { const h = [12.25, 10.5, 14, 10.5][(si) % 4]; building(G, x + 3.5, -11.5, 7, h, 8, styles[si++ % styles.length]); }
+  box(4, 20, 30, M('#121520', 1), G, -74, 10, 0);
+  /* NOVA nightclub */
+  const club = new THREE.Group(); club.position.set(2, 0, 7.5); G.add(club);
+  box(13, 8, 8, M('#0f0e14', 0.65), club, 0, 4, 4);
+  box(13.2, 0.3, 8.2, M('#26222e', 0.6), club, 0, 8.1, 4);
+  S.doorM = E('#a23cff', 2.2); S.doorPlane = plane(1.7, 2.5, S.doorM, club, 0, 1.25, 0.02, 0);
+  box(2.3, 0.18, 0.15, M('#2a2a2e', 0.4, 0.8), club, 0, 2.62, 0.08); box(0.15, 2.6, 0.15, M('#2a2a2e', 0.4, 0.8), club, -0.95, 1.3, 0.08); box(0.15, 2.6, 0.15, M('#2a2a2e', 0.4, 0.8), club, 0.95, 1.3, 0.08);
+  S.signM = new THREE.MeshBasicMaterial({ map: TX.neon, color: C('#ffffff').multiplyScalar(2.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  S.sign = plane(5.2, 1.6, S.signM, club, 0, 4.1, 0.05, 0); S.sign.renderOrder = 3;
+  rbox(3.6, 0.14, 1.5, 0.04, M('#16141c', 0.5, 0.3), club, 0, 2.95, -0.7);
+  S.canopyStrip = box(3.6, 0.04, 0.04, E('#ff3db8', 2.2), club, 0, 2.87, -1.45, false, false);
+  S.shutter = plane(1.8, 2.6, M('#ffffff', 0.6, 0.4, { map: TX.shutter }), club, 0, 1.3, 0.04, 0); S.shutter.visible = false;
+  const chrome = M('#c9ccd2', 0.2, 1);
+  const postX = [-2.6, -1.4, 1.4, 2.6]; postX.forEach(px => { cyl(0.04, 0.04, 0.95, chrome, club, px, 0.63, -1.3, 8); cyl(0.12, 0.14, 0.05, chrome, club, px, 0.18, -1.3, 12); sph(0.06, chrome, club, px, 1.12, -1.3, 8, 6); });
+  [[-2.6, -1.4], [1.4, 2.6]].forEach(([a, b]) => { const curve = new THREE.QuadraticBezierCurve3(V(a, 1.05, -1.3), V((a + b) / 2, 0.75, -1.3), V(b, 1.05, -1.3)); mesh(new THREE.TubeGeometry(curve, 12, 0.025, 6), M('#8a1028', 0.6), club); });
+  S.clubLight = new THREE.PointLight('#a23cff', 8, 12, 2); S.clubLight.position.set(2, 2.2, 6.3); G.add(S.clubLight);
+  S.clubPool = pool(G, 2, 5.6, 3.6, '#a23cff', 0.5, 0.17);
+  /* street lamps */
+  const lampDef = [[-40, 4.6], [-26, 4.6], [-12, 4.6], [8, 4.6], [22, 4.6], [34, 4.6], [-33, -4.6], [-19, -4.6], [1, -4.6], [15, -4.6], [29, -4.6]];
+  const poleM = M('#1c2420', 0.6, 0.6);
+  lampDef.forEach(([x, z], i) => {
+    const L = new THREE.Group(); L.position.set(x, 0, z); G.add(L); const s = Math.sign(z);
+    cyl(0.07, 0.1, 5.4, poleM, L, 0, 2.7, 0, 10); cyl(0.16, 0.2, 0.4, poleM, L, 0, 0.2, 0, 10);
+    const arm = box(0.08, 0.08, 1.0, poleM, L, 0, 5.35, -s * 0.45); const head = rbox(0.5, 0.18, 0.32, 0.05, poleM, L, 0, 5.3, -s * 0.95);
+    const bulbM = E('#ffd9a0', 4.2); const bulb = box(0.38, 0.03, 0.22, bulbM, L, 0, 5.2, -s * 0.95, false, false);
+    const hl = halo(L, 0, 5.1, -s * 0.95, 2.6, '#ffcf8f', 0.55);
+    const pl = pool(G, x, z - s * 0.9, 4.4, '#ffc27a', 0.42);
+    let light = null; if ([2, 3, 4, 8].includes(i)) { light = new THREE.PointLight('#ffc98a', 22, 18, 2); light.position.set(x, 5.0, z - s * 0.95); G.add(light); }
+    S.lamps.push({ x, z, bulbM, hl, pl, light });
+  });
+  /* phone box, bus shelter, bollards, bins, trees */
+  const red = M('#b3141c', 0.5, 0.1); const pb = new THREE.Group(); pb.position.set(14, 0.16, 6.2); G.add(pb);
+  rbox(1.0, 2.5, 1.0, 0.04, red, pb, 0, 1.25, 0); box(1.08, 0.18, 1.08, red, pb, 0, 2.58, 0); const crown = cyl(0.42, 0.55, 0.2, red, pb, 0, 2.76, 0, 4); crown.rotation.y = PI / 4;
+  box(0.76, 1.6, 1.02, E('#ffefc8', 0.65), pb, 0, 1.3, 0, false, false); box(1.02, 1.6, 0.76, E('#ffefc8', 0.65), pb, 0, 1.3, 0, false, false);
+  box(0.6, 0.12, 1.04, E('#ffffff', 1.0), pb, 0, 2.36, 0, false, false); box(1.04, 0.12, 0.6, E('#ffffff', 1.0), pb, 0, 2.36, 0, false, false);
+  const bs = new THREE.Group(); bs.position.set(-8, 0.16, -6.3); G.add(bs);
+  box(3.6, 0.08, 1.3, M('#30343c', 0.4, 0.6), bs, 0, 2.4, 0); box(3.6, 2.2, 0.04, M('#a8c0d0', 0.05, 0.2, { transparent: true, opacity: 0.25 }), bs, 0, 1.25, -0.6);
+  box(1.2, 1.8, 0.1, E('#bfe2ff', 1.1), bs, 1.6, 1.2, 0, false, false); box(2.2, 0.06, 0.4, M('#30343c', 0.4, 0.6), bs, -0.5, 0.5, -0.35);
+  for (let x = -16; x < 34; x += 6) { cyl(0.09, 0.11, 0.9, M('#151515', 0.5, 0.5), G, x, 0.6, 4.35, 10); }
+  [[-22, 6.8], [26, 6.8], [-30, -6.8]].forEach(([x, z]) => { cyl(0.32, 0.32, 0.9, M('#1f3a2a', 0.7), G, x, 0.6, z, 12); });
+  [[-36, -6.4], [-2, -6.4], [20, -6.4], [-46, 6.4]].forEach(([x, z]) => {
+    cyl(0.14, 0.2, 3.6, M('#4b3a2c', 0.9), G, x, 1.9, z, 8);
+    const f = M('#2f4a2c', 0.9, 0, { flatShading: true });
+    [[0, 4.3, 0, 1.7], [0.7, 3.8, 0.4, 1.2], [-0.6, 3.9, -0.3, 1.25]].forEach(([dx, y, dz, r]) => mesh(new THREE.IcosahedronGeometry(r, 1), f, G, x + dx, y, z + dz));
+  });
+  /* the mosque at the end of the street (for Scene 06 and a hint in Scene 02) */
+  S.mosque = buildMiniMosque(G, 47.6, 0, -HP, 1);
+  /* passing traffic */
+  S.traffic = [makeCar('#7a1d1d'), makeCar('#cfcfcf')];
+  S.traffic.forEach(c => { G.add(c.g); c.g.rotation.y = PI; c.g.position.set(-200, 0, -2.1); });
+  /* the friend's car */
+  S.sky = 'night';
+  return S;
+}
+
+/* ------------------------------------------------- NIGHT ROAD (driving treadmill) */
+function buildRoad() {
+  const G = new THREE.Group(); G.position.copy(O.road); scene.add(G);
+  const S = { G, items: [], L: 192 };
+  S.roadM = M('#ffffff', 0.34, 0.1, { map: TX.road.clone(), envMap: envTex, envMapIntensity: 0.1 }); S.roadM.map.repeat.set(24, 1); S.roadM.map.needsUpdate = true;
+  plane(220, 8, S.roadM, G, 0, 0, 0).receiveShadow = true;
+  S.paveM = M('#ffffff', 0.7, 0, { map: TX.pave.clone() }); S.paveM.map.repeat.set(55, 1); S.paveM.map.needsUpdate = true;
+  box(220, 0.16, 3.5, S.paveM, G, 0, 0.08, 5.75); box(220, 0.16, 3.5, S.paveM, G, 0, 0.08, -5.75);
+  const styles = ['stock', 'brick', 'stucco', 'dark'];
+  const scroller = new THREE.Group(); G.add(scroller); S.scroller = scroller;
+  for (let i = 0; i < 27; i++) { [1, -1].forEach(s => { const g = new THREE.Group(); scroller.add(g); const h = [10.5, 14, 12.25, 10.5][(i + (s > 0 ? 0 : 2)) % 4]; building(g, 0, 0, 7, h, 8, styles[(i * 2 + (s > 0 ? 1 : 0)) % 4]); g.position.set(-96 + i * 7.1 + 3.5, 0, s * 11.5); S.items.push({ g, x0: g.position.x }); }); }
+  const poleM = M('#1c2420', 0.6, 0.6);
+  S.lampMats = [];
+  for (let i = 0; i < 12; i++) {
+    const g = new THREE.Group(); scroller.add(g); g.position.set(-96 + i * 16, 0, -4.6);
+    cyl(0.07, 0.1, 5.4, poleM, g, 0, 2.7, 0, 10); box(0.08, 0.08, 1.0, poleM, g, 0, 5.35, 0.45); rbox(0.5, 0.18, 0.32, 0.05, poleM, g, 0, 5.3, 0.95);
+    const bm = E('#cfe0ff', 4); box(0.38, 0.03, 0.22, bm, g, 0, 5.2, 0.95, false, false); S.lampMats.push(bm);
+    const hl = halo(g, 0, 5.1, 0.95, 2.6, '#cfe0ff', 0.5); const pl = pool(g, 0, 0.9, 4.4, '#cfe0ff', 0.4); S.items.push({ g, x0: g.position.x, hl, pl, lamp: true });
+  }
+  S.lights = []; for (let k = 0; k < 5; k++) { const l = new THREE.PointLight('#cfe0ff', 20, 16, 2); G.add(l); S.lights.push(l); }
+  /* distant skyline */
+  for (let i = 0; i < 40; i++) { const a = (i / 40) * TAU; const r = 120 + R() * 30; const h = 20 + R() * 40; box(14, h, 14, M('#0c1020', 1), G, Math.cos(a) * r, h / 2, Math.sin(a) * r, false, false); }
+  return S;
+}
+function updateRoad(S, off, warm) {
+  const L = S.L;
+  S.items.forEach(it => { let x = ((it.x0 + 96 - off) % L + L) % L - 96; it.g.position.x = x; });
+  S.roadM.map.offset.x = (off / 220) * 24; S.paveM.map.offset.x = (off / 220) * 55;
+  const col = C('#cfe0ff').lerp(C('#ffc27a'), warm);
+  S.lampMats.forEach(m => m.color.copy(col).multiplyScalar(4));
+  S.items.forEach(it => { if (it.lamp) { it.hl.material.color.copy(col); it.pl.material.color.copy(col); } });
+  const sp = 16, ph = ((off % sp) + sp) % sp;
+  S.lights.forEach((l, k) => { l.position.set((k - 2) * sp - ph, 5.0, -3.65); l.color.copy(col); });
+}
+
+/* ---------------------------------------------------------------- THE MOSQUE
+   Local frame: entrance faces +Z, the Qibla wall is at Z = -22 (characters
+   pray facing -Z). Courtyard z 8..32, vestibule z 3..8, prayer hall z -22..3. */
+function column(G, x, z, h, stone, gold) {
+  box(0.75, 0.35, 0.75, stone, G, x, 0.175, z); cyl(0.26, 0.3, h, stone, G, x, h / 2 + 0.35, z, 16);
+  cyl(0.38, 0.27, 0.32, gold, G, x, h + 0.5, z, 16); box(0.8, 0.14, 0.8, stone, G, x, h + 0.72, z);
+}
+function arcadeRow(G, x, zs, spring, top, mat, trim, ring = true) {
+  for (let i = 0; i < zs.length - 1; i++) {
+    const zc = (zs[i] + zs[i + 1]) / 2, half = Math.abs(zs[i + 1] - zs[i]) / 2;
+    const a = half - 0.34; const fr = mesh(extrude(spandrelShape(a, spring, half, top), 0.6), mat, G, x - 0.3, 0, zc); fr.rotation.y = HP;
+    if (ring) { const r = mesh(extrude(archRingShape(a, spring, 0.16), 0.66), trim, G, x - 0.33, 0, zc); r.rotation.y = HP; }
+  }
+}
+function buildMosque() {
+  const G = new THREE.Group(); G.position.copy(O.mosque); scene.add(G);
+  const S = { G };
+  const stone = M('#ffffff', 0.86, 0, { map: TX.stone }), cream = M('#efe4cf', 0.9), gold = M('#d9b56c', 0.32, 1), greenDome = M('#5f8f7a', 0.42, 0.35, { envMap: envTex, envMapIntensity: 0.35 });
+  const patM = M('#ffffff', 0.8, 0, { map: TX.pattern.clone() }); patM.map.repeat.set(0.33, 0.33); patM.map.needsUpdate = true;
+  /* ground: street outside, courtyard paving */
+  const asph = M('#ffffff', 0.5, 0.05, { map: TX.asphalt }); plane(160, 120, asph, G, 0, 0, 40);
+  const cy = M('#ffffff', 0.75, 0, { map: TX.courtyard.clone() }); cy.map.repeat.set(10, 6); cy.map.needsUpdate = true; plane(40, 24.5, cy, G, 0, 0.012, 20.25);
+  const path = M('#ffffff', 0.7, 0, { map: TX.marble.clone() }); path.map.repeat.set(1, 6); path.map.needsUpdate = true; plane(3.2, 24, path, G, 0, 0.02, 20);
+  /* perimeter wall and gate */
+  box(17.2, 2.2, 0.6, stone, G, -11.4, 1.1, 32.3); box(17.2, 2.2, 0.6, stone, G, 11.4, 1.1, 32.3);
+  box(0.6, 2.2, 24.6, stone, G, -20, 1.1, 20); box(0.6, 2.2, 24.6, stone, G, 20, 1.1, 20);
+  [-2.9, 2.9].forEach(x => { box(1, 4.2, 1, stone, G, x, 2.1, 32.3); box(1.2, 0.3, 1.2, gold, G, x, 4.35, 32.3); });
+  mesh(extrude(spandrelShape(2.4, 4.0, 2.9, 6.4), 0.9), stone, G, 0, 0, 31.85);
+  mesh(extrude(archRingShape(2.4, 4.0, 0.22), 0.95), gold, G, 0, 0, 31.83);
+  /* courtyard arcades */
+  const zs = [9.5, 13.5, 17.5, 21.5, 25.5, 29.5];
+  [-13, 13].forEach(x => { zs.forEach(z => column(G, x, z, 3.2, stone, gold)); arcadeRow(G, x, zs, 3.9, 5.6, stone, gold); box(3.6, 0.4, 20.8, stone, G, x + Math.sign(x) * 1.6, 5.8, 19.5); box(0.6, 5.6, 20.8, stone, G, x + Math.sign(x) * 3.4, 2.8, 19.5); });
+  /* fountain */
+  const fb = cyl(2.1, 2.3, 0.6, stone, G, -8, 0.3, 20, 8); fb.rotation.y = PI / 8;
+  cyl(1.9, 1.9, 0.05, M('#24505c', 0.05, 0.4, { envMap: envTex, envMapIntensity: 0.9 }), G, -8, 0.56, 20, 8).rotation.y = PI / 8;
+  cyl(0.25, 0.35, 0.9, stone, G, -8, 0.9, 20, 12); cyl(0.5, 0.25, 0.12, stone, G, -8, 1.4, 20, 12);
+  const jet = mesh(new THREE.CylinderGeometry(0.03, 0.09, 0.9, 10, 1, true), waterMat(0.6), G, -8, 1.85, 20, false, false);
+  /* lanterns along the path */
+  S.lanterns = [];
+  [[-2.4, 12], [2.4, 12], [-2.4, 17], [2.4, 17], [-2.4, 24], [2.4, 24], [-2.4, 29], [2.4, 29]].forEach(([x, z]) => {
+    cyl(0.05, 0.07, 1.9, M('#2a2420', 0.5, 0.6), G, x, 0.95, z, 8);
+    const lm = E('#ffc978', 2.6); rbox(0.26, 0.38, 0.26, 0.05, lm, G, x, 2.05, z, false, false);
+    mesh(new THREE.ConeGeometry(0.22, 0.2, 4), M('#2a2420', 0.5, 0.6), G, x, 2.34, z).rotation.y = PI / 4;
+    halo(G, x, 2.05, z, 1.4, '#ffc06a', 0.5); pool(G, x, z, 2.2, '#ffb860', 0.35);
+  });
+  [[-2.4, 14.5], [2.4, 26.5]].forEach(([x, z]) => { const l = new THREE.PointLight('#ffc070', 6, 12, 2); l.position.set(x, 2.2, z); G.add(l); });
+  [[-17, 10], [17, 10], [-17, 30], [17, 30]].forEach(([x, z]) => { cyl(0.12, 0.15, 1.2, M('#4a3a2c', 0.9), G, x, 0.6, z, 8); mesh(new THREE.ConeGeometry(0.9, 4.6, 8), M('#263d2c', 0.9, 0, { flatShading: true }), G, x, 3.4, z); });
+  /* ---------------- building shell ---------------- */
+  // vestibule (z 3..8)
+  box(13.8, 6, 0.6, stone, G, -8.1, 3, 8); box(13.8, 6, 0.6, stone, G, 8.1, 3, 8); box(2.4, 2.4, 0.6, stone, G, 0, 4.8, 8);
+  box(0.6, 6, 5.6, stone, G, -15, 3, 5.5); box(0.6, 6, 5.6, stone, G, 15, 3, 5.5);
+  box(30.6, 0.3, 5.6, stone, G, 0, 5.0, 5.5);
+  const vestFloor = M('#ffffff', 0.35, 0.05, { map: TX.marble.clone(), envMap: envTex, envMapIntensity: 0.12 }); vestFloor.map.repeat.set(10, 2); vestFloor.map.needsUpdate = true;
+  plane(29.4, 4.4, vestFloor, G, 0, 0.012, 5.5);
+  [[-14.68, 5.5, HP], [14.68, 5.5, -HP]].forEach(([x, z, r]) => { const w = plane(4.4, 4.8, cream, G, x, 2.4, z, 0); w.rotation.y = r; });
+  [-8.35, 8.35].forEach(x => plane(13.3, 4.8, cream, G, x, 2.4, 3.32, 0)); plane(3.4, 0.4, cream, G, 0, 4.6, 3.32, 0);
+  [-7.95, 7.95].forEach(x => { const b = plane(13.5, 4.8, cream, G, x, 2.4, 7.68, 0); b.rotation.y = PI; }); { const b = plane(2.4, 1.2, cream, G, 0, 4.2, 7.68, 0); b.rotation.y = PI; }
+  box(29.4, 0.4, 0.06, M('#ffffff', 0.8, 0, { map: TX.band }), G, 0, 4.55, 3.33);
+  // the iwan (pishtaq) portal
+  { const s = new THREE.Shape(), a = 3.0, sp = 6.2, p = archPts(a, sp); s.moveTo(-4.6, 0); s.lineTo(-4.6, 12.8); s.lineTo(4.6, 12.8); s.lineTo(4.6, 0); s.lineTo(a, 0); s.lineTo(a, sp); s.absarc(-p.c, sp, p.R, 0, p.thR, false); s.absarc(p.c, sp, p.R, p.thL, PI, false); s.lineTo(-a, 0); s.closePath();
+    mesh(extrude(s, 1.4), patM, G, 0, 0, 8.3); mesh(extrude(archRingShape(a, sp, 0.32), 1.42), gold, G, 0, 0, 8.29);
+    box(9.6, 0.4, 1.8, gold, G, 0, 12.9, 9.0); for (let k = -4; k <= 4; k++) box(0.5, 0.6, 0.5, stone, G, k * 1.05, 13.4, 9.0);
+    const panel = plane(5.6, 2.6, M('#ffffff', 0.7, 0, { map: TX.mihrab.clone(), emissive: '#d9b56c', emissiveIntensity: 0.05 }), G, 0, 5.6, 8.32, 0); panel.material.map.repeat.set(2, 1); panel.material.map.needsUpdate = true; }
+  const fl = new THREE.PointLight('#ffcf8a', 10, 14, 2); fl.position.set(0, 3.4, 9.4); G.add(fl);
+  [-2.1, 2.1].forEach(x => { cyl(0.01, 0.01, 1.2, gold, G, x, 4.7, 9.0, 4); const lm = E('#ffcf88', 3); rbox(0.3, 0.45, 0.3, 0.06, lm, G, x, 3.9, 9.0, false, false); halo(G, x, 3.9, 9.0, 1.6, '#ffc070', 0.6); });
+  // prayer hall walls (z -22..3), height 11
+  box(0.6, 11, 25.6, stone, G, -15, 5.5, -9.5); box(0.6, 11, 25.6, stone, G, 15, 5.5, -9.5); box(30.6, 11, 0.6, stone, G, 0, 5.5, -22);
+  box(13.6, 11, 0.6, stone, G, -8.5, 5.5, 3); box(13.6, 11, 0.6, stone, G, 8.5, 5.5, 3); box(3.4, 6.6, 0.6, stone, G, 0, 7.7, 3);
+  { const s = new THREE.Shape(); s.moveTo(-15.3, -3.3); s.lineTo(15.3, -3.3); s.lineTo(15.3, 22.3); s.lineTo(-15.3, 22.3); s.closePath(); const h = new THREE.Path(); h.absarc(0, 9.5, 6, 0, TAU, false); s.holes.push(h);
+    const ceil = mesh(new THREE.ShapeGeometry(s, 48), M('#efe4cf', 0.92, 0, { side: THREE.DoubleSide }), G, 0, 11, 0); ceil.rotation.x = -HP;
+    const roof = mesh(new THREE.ShapeGeometry(s, 48), M('#d8ccb2', 0.9, 0, { side: THREE.DoubleSide }), G, 0, 11.5, 0); roof.rotation.x = -HP;
+    const edge = mesh(new THREE.CylinderGeometry(6, 6, 0.5, 64, 1, true), cream, G, 0, 11.25, -9.5); }
+  box(31.2, 0.5, 0.8, M('#d8ccb2', 0.9), G, 0, 11.25, 3); box(31.2, 0.5, 0.8, M('#d8ccb2', 0.9), G, 0, 11.25, -22); box(0.8, 0.5, 25.6, M('#d8ccb2', 0.9), G, -15, 11.25, -9.5); box(0.8, 0.5, 25.6, M('#d8ccb2', 0.9), G, 15, 11.25, -9.5);
+  // drum, inner dome, outer dome
+  mesh(new THREE.CylinderGeometry(6, 6, 2.2, 64, 1, true), M('#efe4cf', 0.9, 0, { side: THREE.DoubleSide }), G, 0, 12.6, -9.5);
+  S.drumWinM = E('#2a3f78', 1.0, { side: THREE.DoubleSide });
+  for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; const w = mesh(new THREE.ShapeGeometry(archShape(0.42, 0.9)), S.drumWinM, G, Math.sin(a) * 5.94, 12.0, -9.5 + Math.cos(a) * 5.94, false, false); w.rotation.y = a + PI; }
+  const inner = mesh(new THREE.SphereGeometry(5.98, 64, 24, 0, TAU, 0, HP), M('#ffffff', 0.85, 0, { map: TX.domeIn, side: THREE.BackSide, emissive: '#3a2a10', emissiveMap: TX.domeIn, emissiveIntensity: 0.0 }), G, 0, 13.7, -9.5, false, false); S.domeInM = inner.material;
+  mesh(domeGeo(6.5, 9.2, 64), greenDome, G, 0, 13.7, -9.5);
+  cyl(0.06, 0.08, 2.2, gold, G, 0, 23.6, -9.5, 8); sph(0.22, gold, G, 0, 23.2, -9.5, 12, 8); { const cr = mesh(new THREE.TorusGeometry(0.5, 0.08, 6, 20, PI * 1.45), gold, G, 0, 25.1, -9.5); cr.rotation.z = -0.62; }
+  // minarets
+  S.minaretRings = E('#8affc8', 1.6);
+  [-18.2, 18.2].forEach(x => { const m = new THREE.Group(); m.position.set(x, 0, 6.5); G.add(m);
+    cyl(1.1, 1.3, 2, stone, m, 0, 1, 0, 12); cyl(0.95, 1.1, 22, stone, m, 0, 13, 0, 16);
+    [15, 22].forEach(y => { cyl(1.55, 1.25, 0.45, stone, m, 0, y, 0, 16); const r = mesh(new THREE.TorusGeometry(1.5, 0.045, 6, 40), S.minaretRings, m, 0, y + 0.55, 0, false, false); r.rotation.x = HP; for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; cyl(0.03, 0.03, 0.55, gold, m, Math.cos(a) * 1.5, y + 0.5, Math.sin(a) * 1.5, 4); } });
+    cyl(0.7, 0.8, 4, stone, m, 0, 26, 0, 16); mesh(domeGeo(0.95, 2.6, 24), greenDome, m, 0, 28, 0); cyl(0.03, 0.04, 1.2, gold, m, 0, 31.2, 0, 6);
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU; mesh(new THREE.ShapeGeometry(archShape(0.16, 0.5)), E('#ffd39a', 0.8), m, Math.sin(a) * 0.82, 25.2, Math.cos(a) * 0.82, false, false).rotation.y = a; } });
+  /* ---------------- vestibule interior ---------------- */
+  // shoe racks (right of the entrance)
+  const wood = M('#ffffff', 0.7, 0, { map: TX.darkWood });
+  [0, 0.42, 0.84].forEach(y => box(3.2, 0.05, 0.45, wood, G, 4.6, 0.25 + y, 7.4)); [3.0, 6.2].forEach(x => box(0.05, 1.2, 0.45, wood, G, x, 0.6, 7.4));
+  const shoeCols = ['#2b2b30', '#7a5a3a', '#e8e8e8', '#1b2a44', '#5a1d1d'];
+  for (let k = 0; k < 9; k++) { const y = [0.3, 0.72, 1.14][k % 3]; const x = 3.3 + Math.floor(k / 3) * 0.9 + (k % 2) * 0.3; [0, 0.13].forEach(dx => rbox(0.1, 0.07, 0.25, 0.03, M(shoeCols[k % 5], 0.6), G, x + dx, y + 0.06, 7.35)); }
+  S.ourShoes = new THREE.Group(); G.add(S.ourShoes);
+  [[5.5, 0.72], [5.85, 0.72]].forEach(([x, y], i) => [0, 0.13].forEach(dx => { const sh = rbox(0.1, 0.075, 0.25, 0.03, M(i ? '#5a4632' : '#f2f2f2', 0.6), S.ourShoes, x + dx, y + 0.06, 7.35); }));
+  S.ourShoes.visible = false;
+  // wudu area (right end of the vestibule, facing the wall at x = 14.7)
+  const tile = M('#ffffff', 0.35, 0, { map: TX.zellige.clone() }); tile.map.repeat.set(2, 1); tile.map.needsUpdate = true;
+  const tw = box(0.05, 2.3, 4.8, tile, G, 14.65, 1.15, 5.5);
+  box(0.75, 0.28, 4.6, M('#c8ccd0', 0.25, 0.85), G, 14.32, 0.14, 5.5); box(0.6, 0.02, 4.4, M('#4c6670', 0.05, 0.3, { envMap: envTex, envMapIntensity: 0.6 }), G, 14.32, 0.285, 5.5);
+  S.taps = []; S.streams = [];
+  const chrome = M('#d7dbe0', 0.15, 1);
+  [7.1, 5.9, 4.7].forEach(z => {
+    const p = cyl(0.025, 0.025, 0.45, chrome, G, 14.47, 0.8, z, 10); p.rotation.z = HP; cyl(0.03, 0.022, 0.07, chrome, G, 14.25, 0.765, z, 10);
+    box(0.12, 0.03, 0.03, chrome, G, 14.42, 0.86, z);
+    const st = mesh(new THREE.CylinderGeometry(0.011, 0.017, 0.47, 10, 1, true), waterMat(0.8), G, 14.25, 0.5, z, false, false); st.visible = false; S.streams.push(st); S.taps.push(V(14.25, 0.77, z));
+    cyl(0.19, 0.21, 0.45, M('#9a6a42', 0.7), G, 13.45, 0.225, z, 18);
+  });
+  S.splash = motes(90, 0.4, 0.25, 2.6, '#e6f6ff', 1.0, 0.0, 3.0); S.splash.position.set(14.25, 0.28, 5.3); G.add(S.splash);
+  const wl = new THREE.PointLight('#e8f0ff', 5, 9, 2); wl.position.set(12.8, 3.6, 5.5); G.add(wl);
+  S.vestLights = [wl];
+  [-7, 4].forEach(x => { const l = new THREE.PointLight('#ffe2b8', 4, 10, 2); l.position.set(x, 4.2, 5.5); G.add(l); S.vestLights.push(l); box(0.5, 0.05, 0.5, E('#fff0d8', 2.2), G, x, 4.83, 5.5, false, false); });
+  // hall doors (two leaves hinged at x = ±1.7, opening inwards)
+  const doorM = M('#ffffff', 0.6, 0, { map: TX.door });
+  S.doors = [-1, 1].map(s => { const h = new THREE.Group(); h.position.set(s * 1.7, 0, 3.0); G.add(h); const leaf = box(1.7, 4.4, 0.12, doorM, h, -s * 0.85, 2.2, 0); const knob = sph(0.05, gold, h, -s * 1.5, 1.2, 0.09, 8, 6); return h; });
+  S.leakM = E('#ffc874', 5); S.leak = [box(0.05, 4.3, 0.02, S.leakM, G, 0, 2.15, 3.33, false, false), box(3.3, 0.04, 0.02, S.leakM, G, 0, 0.02, 3.33, false, false)];
+  S.leakPool = pool(G, 0, 4.0, 2.6, '#ffb860', 0.0);
+  mesh(extrude(archRingShape(1.9, 4.6, 0.24), 0.08), gold, G, 0, 0, 3.32);
+  /* ---------------- prayer hall interior ---------------- */
+  const carpet = M('#ffffff', 0.95, 0, { map: TX.carpet }); plane(29.4, 24.4, carpet, G, 0, 0.015, -9.5);
+  [[-14.68, -9.5, HP], [14.68, -9.5, -HP]].forEach(([x, z, r]) => { const w = plane(24.4, 11, cream, G, x, 5.5, z, 0); w.rotation.y = r; const d = plane(24.4, 1.5, tile, G, x + Math.sign(r) * 0.01, 0.75, z, 0); d.rotation.y = r; });
+  plane(29.4, 11, cream, G, 0, 5.5, -21.68, 0); plane(29.4, 1.5, tile, G, 0, 0.75, -21.67, 0);
+  [[-8.5, 13.6], [8.5, 13.6]].forEach(([x, w]) => { const f = plane(w - 0.02, 11, cream, G, x, 5.5, 2.68, 0); f.rotation.y = PI; const d = plane(w - 0.02, 1.5, tile, G, x, 0.75, 2.67, 0); d.rotation.y = PI; });
+  { const f = plane(3.4, 6.6, cream, G, 0, 7.7, 2.68, 0); f.rotation.y = PI; }
+  // arcades running toward the qibla
+  const czs = [1.2, -3.0, -7.2, -11.4, -15.6, -19.8];
+  [-7.5, 7.5].forEach(x => { czs.forEach(z => column(G, x, z, 4.2, cream, gold)); arcadeRow(G, x, czs, 4.9, 7.6, cream, gold); const bm = box(0.62, 0.7, 22, M('#ffffff', 0.8, 0, { map: TX.band }), G, x, 7.95, -9.3); });
+  // high lattice windows and moonlight shafts
+  S.winM = new THREE.MeshBasicMaterial({ map: TX.lattice, color: C('#3a5aa0').multiplyScalar(1.6) });
+  S.shafts = [];
+  [-1.2, -6.0, -13.0, -17.8].forEach(z => [-1, 1].forEach(s => {
+    const w = mesh(new THREE.ShapeGeometry(archShape(0.9, 2.0)), S.winM, G, s * 14.66, 6.4, z, false, false); w.rotation.y = -s * HP;
+    const b = beam(11, 1.6, '#9db8ff', 0.05, 0.75, 4); b.position.set(s * 14.3, 7.6, z); aim(b, V(-s * 0.62, -1, 0.12)); G.add(b); S.shafts.push(b);
+  }));
+  // qibla wall: mihrab, panels, minbar
+  const mihrab = new THREE.Group(); mihrab.position.set(0, 0, -21.66); G.add(mihrab);
+  S.mihrabM = M('#ffffff', 0.6, 0, { map: TX.mihrab, emissive: '#e0bd6e', emissiveMap: TX.mihrab, emissiveIntensity: 0.0 });
+  mesh(new THREE.ShapeGeometry(archShape(1.25, 3.0)), S.mihrabM, mihrab, 0, 0, 0.01, false, false).material.map.repeat.set(0.6, 0.6);
+  mesh(extrude(archRingShape(1.25, 3.0, 0.3), 0.2), gold, mihrab, 0, 0, 0);
+  [[-1.9, 2.8, 0.18, 5.6], [1.9, 2.8, 0.18, 5.6], [0, 5.6, 4, 0.18]].forEach(([x, y, w, h]) => box(w, h, 0.18, gold, mihrab, x, y, 0.06));
+  const band2 = plane(3.8, 0.9, M('#ffffff', 0.8, 0, { map: TX.band }), mihrab, 0, 6.3, 0.02, 0);
+  [-6.5, 6.5].forEach(x => { const pm = M('#ffffff', 0.8, 0, { map: TX.pattern }); const p = plane(4.2, 5.2, pm, mihrab, x, 4.2, 0.01, 0); box(4.4, 0.12, 0.1, gold, mihrab, x, 6.85, 0.04); box(4.4, 0.12, 0.1, gold, mihrab, x, 1.55, 0.04); });
+  const minbar = new THREE.Group(); minbar.position.set(2.9, 0, -18.0); G.add(minbar);
+  for (let k = 0; k < 9; k++) box(1.0, 0.22 * (k + 1), 0.36, wood, minbar, 0, 0.11 * (k + 1), -k * 0.36);
+  [-0.55, 0.55].forEach(x => { const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(3.4, 0); sh.lineTo(3.4, 2.6); sh.lineTo(0.2, 0.9); sh.lineTo(0, 0.9); sh.closePath(); const sp = mesh(extrude(sh, 0.08), wood, minbar, x - 0.04, 0, 0.18); sp.rotation.y = HP; });
+  [[-0.45, -2.9], [0.45, -2.9], [-0.45, -3.5], [0.45, -3.5]].forEach(([x, z]) => cyl(0.04, 0.04, 1.8, gold, minbar, x, 2.9, z, 6));
+  mesh(domeGeo(0.62, 1.0, 16), gold, minbar, 0, 3.8, -3.2);
+  // chandelier
+  const ch = new THREE.Group(); ch.position.set(0, 0, -9.5); G.add(ch);
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 8, 6), new THREE.MeshBasicMaterial({ color: C('#ffd89a').multiplyScalar(5) }), 80); let bi = 0; const m4 = new THREE.Matrix4();
+  [[3.1, 6.2, 36], [2.1, 6.55, 26], [1.15, 6.9, 18]].forEach(([r, y, n]) => { const t = mesh(new THREE.TorusGeometry(r, 0.055, 8, 64), gold, ch, 0, y, 0, false, false); t.rotation.x = HP; for (let k = 0; k < n; k++) { const a = k / n * TAU; m4.makeTranslation(Math.cos(a) * r, y + 0.1, Math.sin(a) * r); bulbs.setMatrixAt(bi++, m4); } });
+  bulbs.count = bi; ch.add(bulbs); S.bulbM = bulbs.material;
+  for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; const L = Math.hypot(3.1, 2.3); const rod = cyl(0.012, 0.012, L, gold, ch, Math.cos(a) * 1.55, 7.35, Math.sin(a) * 1.55, 4, false); rod.rotation.z = 0; rod.lookAt(V(O.mosque.x, O.mosque.y + 8.5, O.mosque.z - 9.5)); rod.rotateX(HP); }
+  cyl(0.02, 0.02, 10.6, gold, ch, 0, 13.8, 0, 6, false); sph(0.25, gold, ch, 0, 8.5, 0, 12, 8);
+  S.chHalo = [halo(ch, 0, 6.6, 0, 9, '#ffcf88', 0.0), halo(ch, 0, 6.6, 0, 4, '#fff0d0', 0.0)];
+  S.chBeam = beam(6.3, 5.4, '#ffcf88', 0.0, 3.0, 32); S.chBeam.position.set(0, 6.3, 0); ch.add(S.chBeam);
+  S.hallLights = [];
+  const cl = new THREE.PointLight('#ffc77a', 0, 34, 2); cl.position.set(0, 6.4, -9.5); G.add(cl); S.hallLights.push([cl, 70]);
+  [[-13.8, -5], [13.8, -5], [-13.8, -15], [13.8, -15]].forEach(([x, z]) => { const l = new THREE.PointLight('#ffb866', 0, 16, 2); l.position.set(x, 3.8, z); G.add(l); S.hallLights.push([l, 18]); });
+  const ml = new THREE.PointLight('#ffd59a', 0, 10, 2); ml.position.set(0, 2.5, -20.2); G.add(ml); S.hallLights.push([ml, 14]);
+  S.sconceM = E('#ffcf88', 0.0);
+  [-4, -11, -18].forEach(z => [-1, 1].forEach(s => { box(0.12, 0.5, 0.28, gold, G, s * 14.6, 3.6, z); rbox(0.22, 0.32, 0.22, 0.05, S.sconceM, G, s * 14.42, 3.85, z, false, false); }));
+  S.sconceHalos = []; [-4, -11, -18].forEach(z => [-1, 1].forEach(s => S.sconceHalos.push(halo(G, s * 14.4, 3.85, z, 1.6, '#ffc070', 0))));
+  const mlamp = E('#ffd9a0', 0.0); rbox(0.3, 0.42, 0.3, 0.08, mlamp, G, 0, 2.6, -20.9, false, false); S.mlampM = mlamp;
+  // a shelf of mus-hafs (Qur'an copies) by the entrance
+  const books = new THREE.InstancedMesh(new THREE.BoxGeometry(0.07, 0.3, 0.22), M('#ffffff', 0.7), 48); bi = 0;
+  for (let r = 0; r < 3; r++) for (let k = 0; k < 16; k++) { m4.makeTranslation(-6 + k * 0.1, 0.62 + r * 0.55, 2.46); books.setMatrixAt(bi, m4); books.setColorAt(bi++, C(['#1e4d3b', '#7a1f2b', '#1b2a44', '#5a3a20'][(k + r) % 4])); }
+  G.add(books); [0.45, 1.0, 1.55, 2.1].forEach(y => box(1.8, 0.04, 0.32, wood, G, -5.25, y, 2.46));
+  S.dust = motes(900, 26, 10, 22, '#ffd59a', 1.0, 0.0, 0.35); S.dust.position.set(0, 0, -9.5); G.add(S.dust);
+  S.night = motes(200, 36, 14, 26, '#b8c8ff', 0.8, 0.25, 0.3); S.night.position.set(0, 0, 20); G.add(S.night);
+  return S;
+}
+/* Interior light level (0 = doors closed, 1 = hall fully revealed). */
+function setHall(S, k, t) {
+  S.hallLights.forEach(([l, I]) => (l.intensity = I * k));
+  S.bulbM.color.set('#ffd89a').multiplyScalar(0.6 + 3 * k);
+  S.chHalo[0].material.opacity = 0.14 * k; S.chHalo[1].material.opacity = 0.3 * k;
+  S.chBeam.material.uniforms.opacity.value = 0.035 * k;
+  S.sconceM.color.set('#ffcf88').multiplyScalar(0.2 + 3 * k); S.sconceHalos.forEach(h => (h.material.opacity = 0.55 * k));
+  S.mihrabM.emissiveIntensity = 0.12 * k; S.domeInM.emissiveIntensity = 0.5 * k; S.mlampM.color.set('#ffd9a0').multiplyScalar(0.3 + 3.5 * k);
+  S.drumWinM.color.set('#2a3f78').lerp(C('#ffcf88'), k * 0.65).multiplyScalar(0.8 + k * 1.6);
+  S.dust.material.uniforms.opacity.value = 0.35 * k;
+  S.shafts.forEach(b => (b.material.uniforms.opacity.value = 0.035 + 0.025 * k));
+}
+
+/* ---------------------------------------------------------------- HOME + PARK */
+function buildHome() {
+  const G = new THREE.Group(); G.position.copy(O.home); scene.add(G);
+  const S = { G };
+  const wall = M('#e8dfcf', 0.92), white = M('#f3f0ea', 0.6);
+  const floorM = M('#ffffff', 0.55, 0, { map: TX.wood.clone() }); floorM.map.repeat.set(2, 2); floorM.map.needsUpdate = true; plane(8.2, 8.2, floorM, G, 0, 0, 0);
+  box(3.8, 3, 0.2, wall, G, -2.2, 1.5, -4.1); box(2.2, 3, 0.2, wall, G, 3.0, 1.5, -4.1); box(2.2, 1, 0.2, wall, G, 0.8, 0.5, -4.1); box(2.2, 0.4, 0.2, wall, G, 0.8, 2.8, -4.1);
+  box(0.2, 3, 8.4, wall, G, -4.1, 1.5, 0); box(0.2, 3, 8.4, wall, G, 4.1, 1.5, 0); box(8.4, 3, 0.2, wall, G, 0, 1.5, 4.1); box(8.4, 0.2, 8.4, M('#f1ece3', 0.95), G, 0, 3.1, 0);
+  box(8.2, 0.12, 0.04, white, G, 0, 0.06, -3.99); box(0.04, 0.12, 8.2, white, G, -3.99, 0.06, 0); box(0.04, 0.12, 8.2, white, G, 3.99, 0.06, 0);
+  // window
+  [[-0.32, 1.8, 0.08, 1.7], [1.92, 1.8, 0.08, 1.7], [0.8, 2.62, 2.32, 0.08], [0.8, 0.98, 2.4, 0.1], [0.8, 1.8, 0.05, 1.6], [0.8, 1.8, 2.2, 0.05]].forEach(([x, y, w, h]) => box(w, h, 0.12, white, G, x, y, -4.0));
+  box(2.5, 0.06, 0.32, white, G, 0.8, 0.96, -3.86);
+  const curtain = M('#9aab8e', 0.95, 0, { side: THREE.DoubleSide });
+  [-0.75, 2.35].forEach(x => { const g = new THREE.PlaneGeometry(0.7, 2.4, 12, 1); const p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 18) * 0.04); g.computeVertexNormals(); mesh(g, curtain, G, x, 1.62, -3.86); });
+  cyl(0.02, 0.02, 4.0, M('#8a7a60', 0.4, 0.7), G, 0.8, 2.85, -3.86, 6).rotation.z = HP;
+  // the view outside: rooftops & a distant minaret
+  plane(140, 120, M('#3e4a3a', 0.95), G, 0, -0.02, -64);
+  const roofCols = ['#4b4250', '#5a4e48', '#3e4658', '#6a5a50'];
+  for (let i = 0; i < 26; i++) { const x = -26 + i * 2.2 + R(); const h = 4 + R() * 5; const z = -12 - R() * 16; box(2.0, h, 6, M(roofCols[i % 4], 0.95), G, x, h / 2, z, false, false); const rf = box(2.1, 0.6, 6.2, M('#2e2a33', 0.9), G, x, h + 0.2, z, false, false); }
+  S.farMosque = buildMiniMosque(G, 3.5, -46, 0, 0.55);
+  // bed, nightstand, lamp, phone
+  box(2.0, 0.35, 2.3, M('#ffffff', 0.7, 0, { map: TX.darkWood }), G, -2.9, 0.175, 0.0); rbox(1.9, 0.22, 2.2, 0.06, M('#f2efe8', 0.9), G, -2.9, 0.46, 0.0);
+  S.duvet = rbox(1.94, 0.12, 1.45, 0.06, M('#b9c9d6', 0.95), G, -2.9, 0.6, 0.38); rbox(0.75, 0.15, 0.42, 0.07, M('#fbfaf6', 0.95), G, -2.9, 0.64, -0.84);
+  box(2.0, 1.0, 0.1, M('#ffffff', 0.7, 0, { map: TX.darkWood }), G, -2.9, 0.75, -1.2);
+  box(0.5, 0.55, 0.45, M('#ffffff', 0.7, 0, { map: TX.wood }), G, -1.4, 0.275, -0.95);
+  S.nightPhoneM = E('#9cc4ff', 0.2); rbox(0.08, 0.012, 0.15, 0.006, M('#111', 0.3, 0.5), G, -1.35, 0.56, -0.9); S.nightPhone = plane(0.066, 0.13, S.nightPhoneM, G, -1.35, 0.567, -0.9);
+  cyl(0.06, 0.08, 0.04, M('#c9a56a', 0.4, 0.8), G, -1.5, 0.57, -1.05, 12); cyl(0.012, 0.012, 0.28, M('#c9a56a', 0.4, 0.8), G, -1.5, 0.71, -1.05, 6);
+  S.lampM = E('#ffd9a0', 0.4); mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.18, 16, 1, true), S.lampM, G, -1.5, 0.9, -1.05, false, false);
+  S.lamp = new THREE.PointLight('#ffc888', 0, 8, 2); S.lamp.position.set(-1.5, 1.0, -1.05); G.add(S.lamp);
+  S.alarm = new THREE.PointLight('#9cc4ff', 0, 2.5, 2); S.alarm.position.set(-1.35, 0.7, -0.9); G.add(S.alarm);
+  // prayer mat, rahl & Qur'an
+  const mat = plane(0.8, 1.4, M('#ffffff', 0.95, 0, { map: TX.mat }), G, 0.8, 0.012, -2.35);
+  const rahl = new THREE.Group(); rahl.position.set(2.6, 0, -2.78); G.add(rahl);
+  [0.55, -0.55].forEach(r => { const b = box(0.46, 0.5, 0.03, M('#ffffff', 0.6, 0, { map: TX.darkWood }), rahl, 0, 0.22, 0); b.rotation.x = r; });
+  const book = new THREE.Group(); book.position.set(0, 0.47, 0.05); book.rotation.x = 0.55; rahl.add(book);
+  const coverM = M('#ffffff', 0.6, 0, { map: TX.quran }), pageM = M('#ffffff', 0.8, 0, { map: TX.page });
+  [-1, 1].forEach(s => { const half = new THREE.Group(); half.rotation.z = s * -0.16; book.add(half); box(0.2, 0.012, 0.28, coverM, half, s * 0.105, -0.008, 0); box(0.19, 0.022, 0.265, M('#f1e6cc', 0.85), half, s * 0.1, 0.008, 0); const pg = plane(0.185, 0.26, pageM, half, s * 0.1, 0.0195, 0); });
+  S.page = new THREE.Group(); book.add(S.page); const pp = plane(0.185, 0.26, pageM, S.page, 0.095, 0.022, 0); pp.material = M('#ffffff', 0.8, 0, { map: TX.page, side: THREE.DoubleSide });
+  S.book = book; S.quranPos = V();
+  // sink corner
+  cyl(0.09, 0.12, 0.8, white, G, 3.75, 0.4, 1.6, 16); rbox(0.46, 0.16, 0.5, 0.06, white, G, 3.78, 0.86, 1.6);
+  box(0.3, 0.02, 0.34, M('#9ab8c8', 0.05, 0.4), G, 3.78, 0.935, 1.6);
+  const tap = cyl(0.018, 0.018, 0.16, M('#d7dbe0', 0.15, 1), G, 3.9, 1.04, 1.6, 8); const sp = cyl(0.016, 0.016, 0.12, M('#d7dbe0', 0.15, 1), G, 3.85, 1.1, 1.6, 8); sp.rotation.z = HP;
+  S.sinkStream = mesh(new THREE.CylinderGeometry(0.009, 0.013, 0.18, 8, 1, true), waterMat(0.8), G, 3.8, 1.0, 1.6, false, false); S.sinkStream.visible = false;
+  const mirror = plane(0.7, 0.9, M('#c8d4de', 0.04, 1, { envMap: envTex, envMapIntensity: 1.2 }), G, 3.98, 1.65, 1.6, 0); mirror.rotation.y = -HP;
+  // details: rug, plant, shelf, frame with geometric art
+  plane(2.4, 1.6, M('#b38a6a', 0.98), G, -0.4, 0.008, 1.4);
+  cyl(0.18, 0.14, 0.32, M('#cf8a5a', 0.8), G, -3.6, 0.16, 3.5, 14); [0, 1, 2, 3, 4].forEach(k => { const l = mesh(new THREE.IcosahedronGeometry(0.22, 0), M('#4a7a4a', 0.8, 0, { flatShading: true }), G, -3.6 + Math.sin(k) * 0.12, 0.5 + k * 0.1, 3.5 + Math.cos(k) * 0.12); });
+  box(1.2, 0.04, 0.26, M('#ffffff', 0.7, 0, { map: TX.wood }), G, -3.85, 1.7, -2.6).rotation.y = HP;
+  for (let k = 0; k < 9; k++) box(0.2, 0.24 + (k % 3) * 0.03, 0.05, M(['#1e4d3b', '#7a1f2b', '#c9a56a', '#2a3a5a'][k % 4], 0.8), G, -3.85, 1.84, -3.1 + k * 0.11).rotation.y = HP;
+  { const fr = plane(0.8, 0.8, M('#ffffff', 0.7, 0, { map: TX.pattern }), G, -3.98, 2.0, 1.2, 0); fr.rotation.y = HP; }
+  S.sunShaft = beam(5.5, 1.6, '#ffcf8a', 0.0, 1.1, 4); S.sunShaft.position.set(0.8, 2.6, -4.0); G.add(S.sunShaft);
+  S.dust = motes(260, 4, 2.6, 4, '#ffe2b0', 0.32, 0.0, 0.25); S.dust.position.set(0.8, 0.1, -2.2); G.add(S.dust);
+  /* park */
+  const P_ = new THREE.Group(); P_.position.copy(O.park).sub(O.home); G.add(P_); S.park = P_;
+  plane(120, 120, M('#ffffff', 0.95, 0, { map: TX.grass }), P_, 0, 0, -10);
+  const pv = M('#ffffff', 0.8, 0, { map: TX.pave.clone() }); pv.map.repeat.set(2, 30); pv.map.needsUpdate = true; plane(3, 64, pv, P_, 0, 0.012, -10);
+  [[-5, 8], [5.5, 12], [-6, -2], [6, -8], [-5.5, -14], [6.5, -20], [-7, -24], [9, 2]].forEach(([x, z], i) => {
+    cyl(0.16, 0.24, 2.6, M('#5a4230', 0.9), P_, x, 1.3, z, 8);
+    const fm = M(['#5f7f3c', '#6f8f42', '#4f6f38'][i % 3], 0.9, 0, { flatShading: true });
+    [[0, 3.4, 0, 1.6], [0.8, 2.9, 0.5, 1.1], [-0.7, 3.0, -0.4, 1.15], [0.1, 4.2, 0.2, 1.0]].forEach(([dx, y, dz, r]) => mesh(new THREE.IcosahedronGeometry(r, 1), fm, P_, x + dx, y, z + dz));
+  });
+  const bw = M('#ffffff', 0.7, 0, { map: TX.wood });
+  box(1.9, 0.07, 0.5, bw, P_, 2.6, 0.45, 0.0); box(1.9, 0.45, 0.06, bw, P_, 2.6, 0.78, 0.27).rotation.x = -0.15;
+  [[1.75, -0.2], [3.45, -0.2], [1.75, 0.2], [3.45, 0.2]].forEach(([x, z]) => box(0.06, 0.45, 0.06, M('#2a2a2e', 0.5, 0.6), P_, x, 0.22, z));
+  const flowers = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.06, 0), M('#ffffff', 0.8), 260);
+  for (let i = 0; i < 260; i++) { const x = (R() < 0.5 ? -1 : 1) * (1.8 + R() * 6), z = -30 + R() * 46; m4ss.makeTranslation(x, 0.08, z); flowers.setMatrixAt(i, m4ss); flowers.setColorAt(i, C(['#ffd6e0', '#fff3b0', '#ffffff', '#cdb4ff'][i % 4])); }
+  P_.add(flowers);
+  S.parkMosque = buildMiniMosque(P_, 0, -40, 0, 0.85);
+  S.pollen = motes(300, 20, 4, 40, '#fff0c0', 0.9, 0.3, 0.3); S.pollen.position.set(0, 0, -8); P_.add(S.pollen);
+  return S;
+}
+const m4ss = new THREE.Matrix4();
+
+/* ================================================================
+   5. AUDIO — Web Audio, fully generated.
+   Only ambience and the nightclub music are synthesised. There is NO
+   generated Qur'an recitation and NO synthesised Adhan; worship moments
+   are left near-silent with natural room tone only.
+   ================================================================ */
+const AU = { ctx: null, ch: {}, lv: {}, muted: false, nextBeat: 0, beatN: 0 };
+function audioInit() {
+  if (AU.ctx) { AU.ctx.resume(); return; }
+  const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+  const ctx = new Ctx(); AU.ctx = ctx;
+  const master = ctx.createGain(); master.gain.value = AU.muted ? 0 : 0.9;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.25;
+  master.connect(comp); comp.connect(ctx.destination); AU.master = master;
+  const sr = ctx.sampleRate;
+  const buf = (fn, sec = 4) => { const b = ctx.createBuffer(1, sr * sec, sr), d = b.getChannelData(0); fn(d); return b; };
+  AU.white = buf(d => { for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; });
+  AU.brown = buf(d => { let l = 0; for (let i = 0; i < d.length; i++) { l = (l + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = l * 3.5; } });
+  AU.pink = buf(d => { let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0; for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852; b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898; d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926; } });
+  const loop = (b, rate = 1) => { const s = ctx.createBufferSource(); s.buffer = b; s.loop = true; s.playbackRate.value = rate; s.start(0, Math.random() * 3); return s; };
+  const F = (type, f, Q = 0.7) => { const n = ctx.createBiquadFilter(); n.type = type; n.frequency.value = f; n.Q.value = Q; return n; };
+  const chan = (name, nodes) => { const g = ctx.createGain(); g.gain.value = 0; for (let i = 0; i < nodes.length - 1; i++) nodes[i].connect(nodes[i + 1]); nodes[nodes.length - 1].connect(g); g.connect(master); AU.ch[name] = g; AU.lv[name] = 0; return g; };
+  const lfo = (target, rate, depth) => { const o = ctx.createOscillator(); o.frequency.value = rate; const g = ctx.createGain(); g.gain.value = depth; o.connect(g); g.connect(target); o.start(); };
+  /* club music bus → muffling low-pass */
+  AU.clubLP = F('lowpass', 16000, 0.8); AU.music = ctx.createGain(); AU.music.gain.value = 0.55; AU.music.connect(AU.clubLP);
+  { const g = ctx.createGain(); g.gain.value = 0; AU.clubLP.connect(g); g.connect(master); AU.ch.club = g; AU.lv.club = 0; }
+  /* crowd murmur */
+  AU.crowdLP = F('lowpass', 2400); { const bp = F('bandpass', 620, 0.55); chan('crowd', [loop(AU.pink, 1), bp, AU.crowdLP]); lfo(bp.frequency, 0.3, 140); }
+  /* city traffic rumble */
+  chan('traffic', [loop(AU.brown, 1), F('lowpass', 420)]);
+  /* wind */
+  { const lp = F('lowpass', 520); chan('wind', [loop(AU.pink, 0.6), lp]); lfo(lp.frequency, 0.07, 260); }
+  /* car cabin: road roar + engine hum */
+  { const mix = ctx.createGain(); const n = loop(AU.brown, 0.8); const lp = F('lowpass', 170); n.connect(lp); lp.connect(mix); const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 46; const ol = F('lowpass', 120); const og = ctx.createGain(); og.gain.value = 0.25; o.connect(ol); ol.connect(og); og.connect(mix); o.start(); lfo(o.frequency, 0.2, 3); chan('car', [mix]); }
+  /* running water (taps) */
+  { const mix = ctx.createGain(); const n = loop(AU.white, 1); const b1 = F('bandpass', 1800, 0.5), b2 = F('bandpass', 5200, 0.8); n.connect(b1); n.connect(b2); const g2 = ctx.createGain(); g2.gain.value = 0.5; b2.connect(g2); b1.connect(mix); g2.connect(mix); lfo(b1.frequency, 5.3, 380); chan('water', [mix, F('highpass', 300)]); }
+  /* room tone (mosque / bedroom) */
+  chan('room', [loop(AU.pink, 0.35), F('lowpass', 240)]);
+  /* birds — chirps are scheduled into this bus */
+  { const g = ctx.createGain(); g.gain.value = 0; const lp = F('highpass', 1200); g.connect(lp); lp.connect(master); AU.ch.birds = g; AU.lv.birds = 0; AU.birdIn = g; }
+  AU.sfx = ctx.createGain(); AU.sfx.gain.value = 0.9; AU.sfx.connect(master);
+}
+function setMute(m) { AU.muted = m; if (AU.master) AU.master.gain.setTargetAtTime(m ? 0 : 0.9, AU.ctx.currentTime, 0.08); }
+function setLevels(L) {
+  if (!AU.ctx) return; const now = AU.ctx.currentTime;
+  for (const k in AU.ch) { const v = L[k] || 0; if (Math.abs(v - AU.lv[k]) > 0.002) { AU.ch[k].gain.setTargetAtTime(v, now, 0.35); AU.lv[k] = v; } }
+  const cut = L.clubCut || 16000; if (Math.abs(cut - (AU.cut || 0)) > 20) { AU.clubLP.frequency.setTargetAtTime(cut, now, 0.25); AU.crowdLP.frequency.setTargetAtTime(Math.min(2400, cut), now, 0.25); AU.cut = cut; }
+}
+const midiF = m => 440 * Math.pow(2, (m - 69) / 12);
+function aenv(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+function noiseHit(t, type, f, peak, d, out, q = 0.8) { const c = AU.ctx, s = c.createBufferSource(); s.buffer = AU.white; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = c.createGain(); s.connect(fl); fl.connect(g); g.connect(out); aenv(g, t, 0.002, peak, d); s.start(t, Math.random() * 2); s.stop(t + d + 0.05); }
+function tone(t, type, f0, f1, peak, a, d, out, lp) { const c = AU.ctx, o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + a + d * 0.6); const g = c.createGain(); let n = o; if (lp) { const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; o.connect(fl); n = fl; } n.connect(g); g.connect(out); aenv(g, t, a, peak, d); o.start(t); o.stop(t + a + d + 0.05); }
+/* one eighth-note step of the club track (124 BPM, A minor) */
+function clubStep(t, n) {
+  const out = AU.music, step = n % 8, bar = Math.floor(n / 8) % 4, e = 60 / 124 / 2;
+  if (step % 2 === 0) tone(t, 'sine', 150, 42, 0.9, 0.002, 0.32, out);
+  if (step === 2 || step === 6) noiseHit(t, 'bandpass', 1600, 0.28, 0.14, out, 0.9);
+  noiseHit(t, 'highpass', 8000, step % 2 ? 0.12 : 0.04, 0.04, out);
+  const roots = [45, 41, 48, 43];
+  if (step % 2 === 1) tone(t, 'sawtooth', midiF(roots[bar] - 12), 0, 0.22, 0.005, e * 0.8, out, 380);
+  if (step === 0) { const minor = bar === 0; [0, minor ? 3 : 4, 7, 12].forEach(iv => tone(t, 'sawtooth', midiF(roots[bar] + iv + 12) * (1 + (Math.random() - 0.5) * 0.004), 0, 0.028, 0.25, e * 7, out, 1100)); }
+}
+function audioTick(dt) {
+  const c = AU.ctx; if (!c || c.state !== 'running') return; const now = c.currentTime;
+  if (AU.lv.club > 0.003) { if (AU.nextBeat < now) AU.nextBeat = now + 0.05; while (AU.nextBeat < now + 0.16) { clubStep(AU.nextBeat, AU.beatN++); AU.nextBeat += 60 / 124 / 2; } }
+  if (AU.lv.birds > 0.01 && Math.random() < dt * 1.4) { const t = now + 0.02, f = 2600 + Math.random() * 1800, n = 1 + Math.floor(Math.random() * 4); for (let i = 0; i < n; i++) tone(t + i * 0.09, 'sine', f * (1 + Math.random() * 0.2), f * (0.75 + Math.random() * 0.5), 0.05 + Math.random() * 0.05, 0.008, 0.07, AU.birdIn); }
+}
+const SFX = {
+  pop() { if (!AU.ctx) return; const t = AU.ctx.currentTime + 0.01; tone(t, 'sine', 880, 1320, 0.12, 0.004, 0.12, AU.sfx); },
+  send() { if (!AU.ctx) return; const t = AU.ctx.currentTime + 0.01; tone(t, 'sine', 700, 420, 0.08, 0.004, 0.1, AU.sfx); },
+  buzz() { if (!AU.ctx) return; const t = AU.ctx.currentTime + 0.01; [0, 0.34].forEach(o => tone(t + o, 'square', 155, 0, 0.1, 0.01, 0.24, AU.sfx, 500)); },
+  thump() { if (!AU.ctx) return; const t = AU.ctx.currentTime + 0.01; [0, 0.48].forEach(o => { tone(t + o, 'sine', 120, 40, 0.7, 0.003, 0.45, AU.sfx, 180); tone(t + o, 'sawtooth', 55, 0, 0.12, 0.01, 0.35, AU.sfx, 160); }); },
+  alarm() { if (!AU.ctx) return; const t = AU.ctx.currentTime + 0.01; [0, 0.22, 0.44, 1.2, 1.42, 1.64].forEach((o, i) => tone(t + o, 'sine', [988, 1319, 1175][i % 3], 0, 0.07, 0.006, 0.18, AU.sfx)); },
+  whoosh() { if (!AU.ctx) return; const c = AU.ctx, t = c.currentTime + 0.01, s = c.createBufferSource(); s.buffer = AU.pink; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.9; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1400, t + 0.9); f.frequency.exponentialRampToValueAtTime(260, t + 2.2); const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.3); s.connect(f); f.connect(g); g.connect(AU.sfx); s.start(t); s.stop(t + 2.4); },
+  door() { if (!AU.ctx) return; const c = AU.ctx, t = c.currentTime + 0.01; tone(t, 'triangle', 90, 70, 0.08, 0.3, 2.6, AU.sfx, 300); },
+};
+
+/* ================================================================
+   6. SCENES
+   Every scene is a deterministic function of its local time t, so
+   moving forwards/backwards always lands in a consistent state.
+   Camera "keys" are joined into Catmull-Rom splines; a key with
+   cut:true begins a new shot (with a soft dip to black).
+   ================================================================ */
+const ENV0 = { skyT: '#000000', skyM: '#000000', skyB: '#000000', sunD: [0, 1, 0], sunC: '#000000', sunA: 0, stars: 0, fogC: '#000000', fogD: 0.02,
+  hemS: '#ffffff', hemG: '#222222', hemI: 0.4, keyC: '#ffffff', keyI: 1, keyP: [-10, 25, 10], rimC: '#ffffff', rimI: 0, rimP: [8, 6, -12],
+  exp: 1, bS: 0.8, bR: 0.6, bT: 0.8, tint: [1, 1, 1], lift: [0, 0, 0], sat: 1, vig: 0.5, blur: 0.5 };
+function mkEnv(o, base = ENV0) { const src = Object.assign({}, base, o), e = {}; for (const k in src) { const v = src[k]; e[k] = typeof v === 'string' ? C(v) : Array.isArray(v) ? V(...v) : v; } e._src = src; return e; }
+const ext = (b, o) => mkEnv(o, b._src);
+function mixEnv(a, b, t) { if (t <= 0) return a; if (t >= 1) return b; const o = {}; for (const k in a) { if (k === '_src') continue; const x = a[k], y = b[k]; o[k] = x && (x.isColor || x.isVector3) ? x.clone().lerp(y, t) : lerp(x, y, t); } return o; }
+
+const PAL = {};
+function buildPalettes() {
+  PAL.club = mkEnv({ fogC: '#140620', fogD: 0.04, hemS: '#4a2a8a', hemG: '#0a0410', hemI: 0.55, keyC: '#7a6aff', keyI: 0.45, keyP: [-6, 14, 8], rimC: '#ff2a8a', rimI: 0.9, rimP: [4, 5, -10], exp: 1.05, bS: 1.0, bR: 0.65, bT: 0.7, tint: [1.02, 0.94, 1.08], sat: 1.12, vig: 0.6, blur: 0.75 });
+  PAL.clubDim = ext(PAL.club, { fogC: '#0a0612', fogD: 0.055, hemS: '#2a2448', hemI: 0.28, keyI: 0.22, rimC: '#9fb0ff', rimI: 0.65, exp: 0.92, bS: 0.75, tint: [0.95, 0.95, 1.06], sat: 0.6, vig: 0.78, blur: 1.15 });
+  PAL.street = mkEnv({ skyT: '#03060f', skyM: '#0b1426', skyB: '#2c2228', stars: 0.6, fogC: '#0b1220', fogD: 0.02, hemS: '#2a3a5c', hemG: '#0a0a10', hemI: 0.55, keyC: '#8ea6e0', keyI: 0.8, keyP: [-25, 35, -15], rimC: '#ffad5e', rimI: 0.5, rimP: [10, 6, 10], exp: 1.08, bS: 0.85, bR: 0.55, bT: 0.75, tint: [0.95, 1, 1.08], sat: 0.92, vig: 0.55, blur: 0.55 });
+  PAL.road = ext(PAL.street, { skyT: '#030714', skyM: '#0b1732', skyB: '#1f2230', stars: 0.7, fogC: '#0a1226', fogD: 0.016, hemS: '#24324f', hemI: 0.45, keyC: '#8aa0d0', keyI: 0.45, rimC: '#9fc0ff', rimI: 0.3, tint: [0.94, 1, 1.1] });
+  PAL.roadWarm = ext(PAL.road, { skyB: '#3a2a1c', fogC: '#1c1812', hemS: '#4a3a2a', keyC: '#e0b070', rimC: '#ffc27a', rimI: 0.6, tint: [1.08, 1.0, 0.9], sat: 1.0 });
+  PAL.mosqueNight = mkEnv({ skyT: '#040a1c', skyM: '#0d2042', skyB: '#1e2c46', stars: 0.9, sunD: [-0.5, 0.45, 0.75], sunC: '#9db5ff', sunA: 0.22, fogC: '#0a1428', fogD: 0.012, hemS: '#2e4a78', hemG: '#0e1016', hemI: 0.7, keyC: "#a8bfff", keyI: 0.95, keyP: [-30, 40, 35], rimC: '#ffcf88', rimI: 0.3, rimP: [0, 6, -20], exp: 1.05, bS: 0.9, bR: 0.6, bT: 0.75, tint: [0.92, 1, 1.12], sat: 0.95, vig: 0.5, blur: 0.5 });
+  PAL.vest = ext(PAL.mosqueNight, { fogC: '#1a1a22', fogD: 0.01, hemS: '#cfcbc4', hemG: '#3a3428', hemI: 0.55, keyI: 0.35, rimC: '#ffd59a', rimI: 0.25, tint: [0.97, 1, 1.05], vig: 0.55, blur: 0.6 });
+  PAL.hall = ext(PAL.vest, { fogC: '#2a1a0c', fogD: 0.009, hemS: '#ffe0b0', hemG: '#4a3018', hemI: 0.6, keyC: '#ffd59a', keyI: 0.2, rimC: '#ffd27a', rimI: 0.5, rimP: [0, 8, -14], exp: 1.0, bS: 0.75, bR: 0.6, bT: 0.85, tint: [1.07, 1.0, 0.88], lift: [0.008, 0.004, 0], sat: 1.05, vig: 0.5, blur: 0.45 });
+  PAL.predawn = mkEnv({ skyT: '#0b1838', skyM: '#2c3f6d', skyB: '#6a5a7a', stars: 0.3, sunD: [0.1, -0.05, -1], sunC: '#ffb46a', sunA: 0.2, fogC: '#2c3550', fogD: 0.01, hemS: '#5a6a9a', hemG: '#2a2630', hemI: 0.45, keyC: '#8aa0d8', keyI: 0.5, keyP: [3, 8, -14], rimC: '#ffc890', rimI: 0.2, exp: 1.05, tint: [0.95, 1, 1.08], sat: 0.95, vig: 0.55, blur: 0.5 });
+  PAL.sunrise = ext(PAL.predawn, { skyT: '#5f8fd0', skyM: '#f3c58a', skyB: '#ffd9a0', stars: 0, sunD: [0.12, 0.06, -1], sunA: 1, fogC: '#e8c9a0', fogD: 0.008, hemS: '#ffe2bc', hemG: '#6a5040', hemI: 0.9, keyC: '#ffc27a', keyI: 3.2, keyP: [4, 7, -26], rimC: '#ffcf8a', rimI: 0.6, exp: 1.1, bS: 0.9, bT: 0.8, tint: [1.08, 1.0, 0.9], lift: [0.02, 0.01, 0], sat: 1.05, vig: 0.45 });
+  PAL.day = ext(PAL.sunrise, { skyT: '#5f9ae0', skyM: '#bcd8f0', skyB: '#e8eef2', sunD: [0.2, 0.6, -1], sunC: '#fff2dc', sunA: 0.6, fogC: '#c8d8e8', fogD: 0.006, hemS: '#eaf2ff', hemG: '#7a6a5a', hemI: 1.1, keyC: '#fff4e0', keyI: 3.0, keyP: [5, 14, -20], rimI: 0.2, tint: [1, 1, 1.02], lift: [0, 0, 0] });
+  PAL.night = ext(PAL.predawn, { skyT: '#050916', skyM: '#0e1830', skyB: '#1c2236', stars: 0.7, sunA: 0, fogC: '#101420', hemS: '#2a3456', hemG: '#1a1410', hemI: 0.3, keyC: '#7a8cc8', keyI: 0.25, rimC: '#ffc888', tint: [1.0, 0.98, 1.0] });
+  PAL.park = ext(PAL.sunrise, { keyP: [-10, 9, -40], fogD: 0.012, sunD: [-0.2, 0.08, -1] });
+  PAL.dawn1 = mkEnv({ skyT: '#0b1f4a', skyM: '#3d6f9c', skyB: '#a9d2df', stars: 0.25, sunD: [1, -0.04, 0.1], sunC: '#ffd9b0', sunA: 0.5, fogC: '#3e5c7c', fogD: 0.016, hemS: '#7f9cc8', hemG: '#2e3240', hemI: 1.0, keyC: '#b8ccef', keyI: 0.9, keyP: [30, 20, -10], rimC: '#ffd9b0', rimI: 0.4, rimP: [20, 4, 0], exp: 1.1, bS: 0.8, bR: 0.6, bT: 0.8, tint: [0.95, 1, 1.06], sat: 0.95, vig: 0.5, blur: 0.45 });
+  PAL.dawn2 = ext(PAL.dawn1, { skyT: '#2a5d9a', skyM: '#9fd0e6', skyB: '#fff2dc', stars: 0, sunD: [1, 0.03, 0.05], sunA: 1.0, fogC: '#a9c6d6', fogD: 0.005, hemS: '#cfe2f6', hemG: '#4a4a50', hemI: 1.0, keyC: '#ffe6c8', keyI: 1.6, keyP: [40, 12, -5], rimC: '#fff0d8', rimI: 0.5, exp: 1.0, bS: 0.7, bT: 0.85, tint: [1.02, 1, 0.98], sat: 1.02 });
+}
+
+/* ---------- shared characters ---------- */
+let ADAM, YUSUF, CAR;
+function buildCast() {
+  ADAM = makeCharacter({ skin: '#b98260', hair: '#1a120d', top: '#16151b', bottom: '#2f4a6e', shoe: '#f2f2f2', quiff: true, fade: true, lip: '#80493a' });
+  YUSUF = makeCharacter({ skin: '#8f5c3e', hair: '#120d0a', top: '#2e4f5c', bottom: '#2b2b30', shoe: '#5a4632', beard: true, kufi: true, accent: '#f3f0e8', lip: '#6e3e30' });
+  scene.add(ADAM.root, YUSUF.root);
+  ADAM.phoneLight = new THREE.PointLight('#b8d4ff', 0, 1.4, 2); ADAM.phone.add(ADAM.phoneLight); ADAM.phoneLight.position.set(0, 0, 0.12);
+  CAR = makeCar('#2c3b4c', true); scene.add(CAR.g);
+  outfitYusuf();
+}
+const outfitClub = () => setOutfit(ADAM, '#16151b', '#2f4a6e', '#f2f2f2', { longSleeve: false, chain: true });
+const outfitModest = () => setOutfit(ADAM, '#6f7d63', '#d1c5ad', '#3a3632', { longSleeve: true, hem: true });
+const outfitYusuf = () => setOutfit(YUSUF, '#2e4f5c', '#2b2b30', '#5a4632', { longSleeve: true, hem: true });
+function phonePose(base, t, typing = false) { const p = Object.assign({}, base, { rsX: 0.48, rsZ: 0.04, reX: 1.9, reZ: 0.5, rw: -0.45, hdX: 0.42, nkX: 0.14, eyeY: -0.95 }); if (typing) p.rw += Math.sin(t * 17) * 0.05; return p; }
+function lookAtYaw(c, tx, tz) { const p = c.root.position; return Math.atan2(tx - p.x, tz - p.z); }
+function headTo(p, c, tx, tz, k = 1) { let d = lookAtYaw(c, tx, tz) - c.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); p.hdY = lerp(p.hdY, clamp(d, -1.1, 1.1), k); p.eyeX = lerp(p.eyeX, clamp(d * 0.6, -1, 1), k); return p; }
+function seatIn(c, car, lx, lz, pose) { const w = car.g.localToWorld(V(lx, 0.16, lz)); c.root.position.copy(w); c.root.rotation.set(0, car.g.rotation.y + HP, 0); applyPose(c, pose, 0.016); }
+const wpos = (o, dx = 0, dy = 0, dz = 0) => o.localToWorld(V(dx, dy, dz));
+/* camera key helper (positions given in the set's local frame) */
+const kk = (o, t, p, l, fov = 45, x = {}) => Object.assign({ t, p: V(...p).add(o), l: V(...l).add(o), fov }, x);
+
+/* ---------- traffic in the street ---------- */
+function updateTraffic(t, lightsOn) {
+  SETS.street.traffic.forEach((c, i) => { const x = 60 - ((t * 12 + i * 85) % 180); c.g.position.set(x, 0, -2.1); c.spin(-x); c.setLights(lightsOn); });
+}
+
+const SC = [];
+/* ================================================== SCENE 01 — THE NIGHTCLUB */
+SC.push({
+  num: '01', title: 'The Nightclub', theme: 'Disconnection · temptation · realisation', dur: 34, set: 'club',
+  init: () => ({ realise: null, ph: 0 }),
+  keys: () => { const o = O.club; return [kk(o, 0, [0, 5.4, 12.6], [0, 1.4, -2], 50), kk(o, 7, [4.2, 3.4, 8.8], [0, 1.4, 0], 46), kk(o, 14, [2.6, 2.2, 5.4], [0, 1.55, 1.2], 42), kk(o, 23, [1.0, 1.78, 3.35], [0, 1.62, 1.2], 38), kk(o, 34, [-0.75, 1.72, 2.95], [0, 1.56, 1.2], 35)]; },
+  enter() { outfitClub(); barefoot(ADAM, false); YUSUF.root.visible = false; CAR.g.visible = false; ADAM.root.visible = true; ADAM.phone.visible = false; },
+  update(t, dt, st) {
+    if (st.realise == null && t > 16) st.realise = 16;
+    const r = st.realise == null ? 0 : sstep(st.realise, st.realise + 5, t); st.r = r;
+    st.ph += dt * lerp(1, 0.16, r);
+    updateClub(SETS.club, st.ph, gT, r);
+    let p = dancePose(st.ph, 0.85, 0.42); p.smile = 0.25;
+    if (st.realise != null) {
+      const rt = t - st.realise, still = idlePose(t, 1, P({ hdX: 0.05 }));
+      still.hdY = Math.sin(rt * 0.9) * 0.75 * win(rt, 0.8, 6.5, 1.2); still.eyeX = still.hdY * 0.8;
+      const low = sstep(5.5, 9, rt); still.hdX = 0.05 + 0.5 * low; still.nkX = 0.15 * low; still.eyeY = -0.8 * low; still.spX = 0.03 + 0.08 * low;
+      still.sad = sstep(1.5, 6, rt) * 0.85; still.lsX = still.rsX = 0.02;
+      p = mixPose(p, still, sstep(0, 2.5, rt));
+    }
+    place(ADAM, O.club, 0, 1.2, 0.15); applyPose(ADAM, p, dt);
+    SETS.club.mcRim.intensity = lerp(6, 45, r);
+  },
+  env: (t, st) => mixEnv(PAL.club, PAL.clubDim, st.r || 0),
+  audio: (t, st) => ({ club: 0.85 - 0.3 * (st.r || 0), clubCut: lerp(16000, 360, st.r || 0), crowd: lerp(0.32, 0.1, st.r || 0) }),
+  narr: (t, st) => (st.realise != null && t > st.realise + 4 && t < st.realise + 15 ? 'Sometimes, even when you’re surrounded by everyone, you can still feel completely lost.' : ''),
+  hot: [{ label: 'Look closer', pos: () => wpos(ADAM.head, 0, 0.34, 0), when: (t, st) => t > 2.5 && st.realise == null, act: (st, t) => { st.realise = t; } }]
+});
+
+/* ================================================== SCENE 02 — THE PHONE CALL */
+const PATH2 = [[2, 7.4], [2.1, 6.3], [4.6, 5.6], [7.4, 5.35]];
+SC.push({
+  num: '02', title: 'The Phone Call', theme: 'Reaching out · the first step', dur: 33, set: 'street',
+  init: () => ({ click: null }),
+  keys: () => { const o = O.street; return [kk(o, 0, [-4, 2.4, -2.5], [2, 2.2, 7.5], 46), kk(o, 4.5, [0.5, 1.9, 0.6], [4, 1.5, 6.2], 44), kk(o, 8.5, [6.5, 1.62, 3.9], [7.4, 1.6, 5.35], 34), kk(o, 12.5, [8.35, 2.0, 6.85], [7.3, 1.3, 4.95], 36), kk(o, 19, [8.5, 1.95, 6.95], [7.3, 1.28, 4.92], 34), kk(o, 25, [5.2, 1.5, 3.0], [7.4, 1.45, 5.3], 40), kk(o, 33, [-3, 3.2, -2], [8, 1.5, 4.5], 44)]; },
+  enter() { outfitClub(); barefoot(ADAM, false); YUSUF.root.visible = false; CAR.g.visible = false; ADAM.root.visible = true; streetState('night'); },
+  update(t, dt, st) {
+    const rev = st.rev = Math.min(st.click ?? 99, 12.5);
+    const w = walkOn(PATH2, 1.8, 7.2, t);
+    let p;
+    if (t < 7.2) { p = walkPose(w.ph, w.amt, P({ sad: 0.5, hdX: 0.15 })); place(ADAM, O.street, w.x, w.z, w.yaw); }
+    else { place(ADAM, O.street, w.x, w.z, lerpAngle(w.yaw, PI, sstep(7.2, 8.4, t))); p = idlePose(t, 2, P({ sad: 0.6, hdX: 0.25, eyeY: -0.4 })); }
+    ADAM.root.visible = t > 1.5;
+    const hold = sstep(9.2, 10.4, t) * (1 - 0.7 * sstep(rev + 11.5, rev + 12.6, t));
+    p = mixPose(p, phonePose(p, t, t > rev && t < rev + 8), hold);
+    const look = sstep(rev + 12, rev + 13.5, t); p.hdY = lerp(p.hdY, -0.7, look); p.hdX = lerp(p.hdX, 0.1, look); p.eyeX = lerp(p.eyeX, -0.6, look);
+    applyPose(ADAM, p, dt);
+    ADAM.phone.visible = t > 9.6; ADAM.phoneLight.intensity = t > 9.6 ? 0.25 * hold : 0;
+    updateTraffic(gT, true);
+  },
+  env: () => PAL.street,
+  audio: t => ({ club: 0.3, clubCut: lerp(900, 260, sstep(1, 8, t)), traffic: 0.42, wind: 0.14, crowd: 0.05 }),
+  sfx: [[3.5, 'whoosh'], [20, 'whoosh']],
+  narr: t => (t > 23 && t < 32 ? 'Sometimes, all it takes is reaching out to the right person.' : ''),
+  phone: (t, st) => (t >= st.rev && t < st.rev + 11 ? { id: 's2', name: 'Yusuf', time: '2:47', status: 'online', t: t - st.rev, items: [
+    { at: 0.5, me: 1, text: 'bro, you awake?' }, { at: 1.6, until: 3.1, typing: 1 }, { at: 3.1, me: 0, text: 'yeah, what’s wrong?' },
+    { at: 5.2, me: 1, text: 'can you come get me?' }, { at: 6.2, until: 7.9, typing: 1 }, { at: 7.9, me: 0, text: 'where are you? i’m coming.' }] } : null),
+  hot: [{ label: 'Open the phone', pos: () => wpos(ADAM.phone, 0, 0.06, 0), when: (t, st) => t > 9.8 && st.click == null && t < 12.5, act: (st, t) => { st.click = t; } }]
+});
+
+/* ================================================== SCENE 03 — THE JOURNEY */
+const FPATH3 = [[7.6, 0.95], [4.4, 1.0], [4.2, 3.6], [5.6, 4.95], [6.5, 5.3]];
+const APATH3b = [[7.4, 5.35], [7.6, 4.3], [7.5, 3.6]];
+const FPATH3b = [[6.5, 5.3], [5.2, 4.6], [4.4, 3.0], [4.6, 1.0], [7.5, 0.8]];
+SC.push({
+  num: '03', title: 'The Journey', theme: 'Friendship · compassion · guidance', dur: 45, set: 'street',
+  init: () => ({}),
+  keys: () => { const o = O.street, r = O.road; return [
+    kk(o, 0, [4.6, 1.4, 6.6], [20, 1.0, 2.4], 40), kk(o, 5.6, [3.4, 1.6, 6.4], [7.5, 1.0, 2.4], 42), kk(o, 10.5, [10.2, 1.65, 6.4], [6.9, 1.5, 5.3], 38),
+    kk(o, 14.5, [9.6, 1.62, 6.4], [7.0, 1.58, 5.35], 34), kk(o, 18.5, [5.6, 1.7, 4.95], [7.4, 1.55, 5.35], 34), kk(o, 22.5, [5.2, 2.0, 7.0], [7.0, 1.2, 3.5], 40), kk(o, 25.4, [11, 2.4, 6.4], [6, 1.0, 2.2], 42),
+    kk(r, 25.6, [-3.2, 1.05, 3.4], [0.3, 0.9, -2], 38, { cut: true, set: 'road' }), kk(r, 31, [2.8, 1.15, 2.6], [0, 1.0, -2], 38),
+    kk(r, 31.2, [-1.42, 1.3, -2.0], [6, 1.15, -2.0], 58, { cut: true, set: 'road' }), kk(r, 37.2, [-1.48, 1.28, -1.94], [6, 1.2, -2.06], 56),
+    kk(r, 37.4, [7, 0.6, 0.6], [0, 0.9, -2], 40, { cut: true, set: 'road' }), kk(r, 45, [4.5, 1.7, 2.8], [0, 1.0, -2], 42)]; },
+  enter() { outfitClub(); barefoot(ADAM, false); ADAM.root.visible = true; ADAM.phone.visible = false; CAR.g.visible = true; CAR.glass.visible = true; streetState('night'); },
+  update(t, dt, st) {
+    const o = O.street;
+    if (t < 25.5) {
+      const u = clamp(t / 5.6), cx = lerp(48, 7.2, easeOut(u, 2.2));
+      CAR.g.position.set(o.x + cx, 0, o.z + 2.15); CAR.g.rotation.set(0, PI, 0); CAR.spin(-cx); CAR.setLights(true);
+      // Yusuf
+      YUSUF.root.visible = t > 5.9;
+      let fp;
+      if (t < 22.4) { const w = walkOn(FPATH3, 6.2, 11.4, t); place(YUSUF, o, w.x, w.z, w.moving ? w.yaw : HP); fp = walkPose(w.ph, w.amt, P({ smile: 0.1, sad: 0.25 })); if (!w.moving && t > 11) fp = idlePose(t, 4, P({ sad: 0.3, hdX: 0.05 })); }
+      else { const w = walkOn(FPATH3b, 22.6, 25.3, t); place(YUSUF, o, w.x, w.z, w.moving ? w.yaw : 0); fp = walkPose(w.ph, w.amt, P()); }
+      const touch = win(t, 11.6, 14.4, 0.7) + win(t, 18.4, 22.2, 0.8);
+      fp = mixPose(fp, Object.assign({}, fp, { rsX: 1.25, rsZ: 0.18, reX: 0.35, reZ: 0.15, hdX: 0.12 }), clamp(touch));
+      if (t > 21.8 && t < 23) fp.lsX = lerp(fp.lsX, 0.9, win(t, 21.9, 23, 0.4)), fp.lsZ = 0.5; // gestures to the car
+      applyPose(YUSUF, fp, dt);
+      // Adam
+      let ap;
+      if (t < 22.6) {
+        const yaw = lerpAngle(PI, -HP, sstep(6.5, 10.5, t)); place(ADAM, o, 7.4, 5.35, yaw);
+        ap = idlePose(t, 2, P({ sad: 0.65, hdX: 0.2 }));
+        if (t < 9) headTo(ap, ADAM, o.x + cx, o.z + 2.15, 1); else headTo(ap, ADAM, YUSUF.root.position.x, YUSUF.root.position.z, sstep(9, 10, t));
+        const lowered = win(t, 13, 22, 1.2); ap.hdX = lerp(ap.hdX, 0.42, lowered); ap.eyeY = -0.7 * lowered; ap.nkX = 0.1 * lowered;
+        ap = mixPose(ap, Object.assign({}, ap, { hdX: 0.0, eyeY: 0.1, sad: 0.4 }), win(t, 21.6, 22.8, 0.4));
+      } else { const w = walkOn(APATH3b, 22.6, 25.0, t); place(ADAM, o, w.x, w.z, w.moving ? w.yaw : PI); ap = walkPose(w.ph, w.amt, P({ sad: 0.4 })); }
+      applyPose(ADAM, ap, dt);
+      updateTraffic(gT, true);
+    } else {
+      const tt = t - 25.5, off = tt * 12;
+      updateRoad(SETS.road, off, sstep(28, 44, t));
+      CAR.g.position.set(O.road.x, 0, O.road.z - 2.0); CAR.g.rotation.set(0, 0, 0); CAR.spin(off); CAR.setLights(true);
+      YUSUF.root.visible = ADAM.root.visible = true;
+      seatIn(YUSUF, CAR, -0.04, 0.42, sitPose({ lsX: 0.95, rsX: 0.95, leX: 0.75, reX: 0.75, leZ: 0.25, reZ: 0.25, hdY: Math.sin(t * 0.3) * 0.08, smile: 0.15 }));
+      const talk = win(t, 33, 40, 1);
+      seatIn(ADAM, CAR, -0.04, -0.42, sitPose({ hdY: lerp(-0.5, 0.35, talk), hdX: 0.12, sad: lerp(0.5, 0.2, sstep(34, 44, t)), smile: 0.15 * sstep(40, 44, t), eyeX: lerp(-0.6, 0.4, talk) }));
+    }
+  },
+  env: t => (t < 25.5 ? PAL.street : mixEnv(PAL.road, PAL.roadWarm, sstep(28, 44, t))),
+  audio: t => (t < 25.5 ? { traffic: 0.4, wind: 0.12, club: 0.18, clubCut: 240, car: 0.22 * win(t, 0, 25.5, 2) } : { car: t > 31.2 && t < 37.3 ? 0.75 : 0.5, traffic: 0.22, wind: 0.08 }),
+  sfx: [[0.2, 'whoosh']],
+  subs: [[10.8, 13.2, 'Yusuf', 'You alright, bro?'], [13.4, 15.9, 'Adam', 'Honestly, I don’t even know.'], [16.1, 18.0, 'Yusuf', 'What’s happened?'],
+    [18.2, 22.0, 'Adam', 'I just feel like I’ve been going the wrong way for a long time.'], [22.2, 24.9, 'Yusuf', 'Come on. Let’s go somewhere.']],
+  narr: t => (t > 30 && t < 41 ? 'True friendship isn’t about judging someone for where they’ve been. It’s about helping them find their way forward.' : ''),
+  hot: [{ label: 'Look through the window', pos: () => wpos(CAR.g, -0.7, 1.2, 0.9), when: t => t > 26.5 && t < 31, act: () => showInfo('Through the window', 'Streetlights passed one after another, like years he felt he had wasted. Yusuf didn’t ask where he’d been. He just drove, and let the silence be gentle.') }]
+});
+
+/* ================================================== SCENE 04 — THE MOSQUE (centrepiece) */
+const WUDU = [
+  ['Intention in the heart · “Bismillah”', 2.4, 'rest'], ['Washing the hands — three times', 3.6, 'hands'], ['Rinsing the mouth — three times', 3.6, 'mouth'],
+  ['Rinsing the nose — three times', 3.4, 'nose'], ['Washing the face — three times', 3.6, 'face'], ['The right arm, up to the elbow — three times', 3.2, 'armR'],
+  ['Then the left arm', 3.2, 'armL'], ['Wiping over the head', 2.6, 'head'], ['Wiping the ears', 2.4, 'ears'],
+  ['The right foot, up to the ankle — three times', 3.2, 'footR'], ['Then the left foot', 3.2, 'footL']];
+const WUDU_T0 = 38.4;
+function wuduPose(kind, lt) {
+  const b = sitPose({ spX: 0.32, hdX: 0.18, eyeY: -0.6 }), osc = Math.sin(lt * 5.2), o2 = Math.sin(lt * 3.1);
+  const q = Object.assign({}, b);
+  switch (kind) {
+    case 'rest': Object.assign(q, { lsX: 0.6, rsX: 0.6, leX: 0.65, reX: 0.65, hdX: 0.3, blink: 0.4 }); break;
+    case 'hands': Object.assign(q, { lsX: 0.95, rsX: 0.95, leX: 0.75 + osc * 0.08, reX: 0.75 - osc * 0.08, leZ: 0.45, reZ: 0.45, lw: osc * 0.3, rw: -osc * 0.3 }); break;
+    case 'mouth': Object.assign(q, { rsX: 0.62, reX: 2.15 + Math.max(0, osc) * 0.18, reZ: 0.55, lsX: 0.85, leX: 0.7, leZ: 0.3, hdX: 0.05 }); break;
+    case 'nose': Object.assign(q, { rsX: 0.6, reX: 2.3 + Math.max(0, osc) * 0.15, reZ: 0.5, lsX: 0.55, leX: 2.05, leZ: 0.6, hdX: 0.0 }); break;
+    case 'face': Object.assign(q, { lsX: 0.55, rsX: 0.55, leX: 2.2 + o2 * 0.14, reX: 2.2 + o2 * 0.14, leZ: 0.5, reZ: 0.5, hdX: 0.05, blink: 0.85 }); break;
+    case 'armR': Object.assign(q, { rsX: 0.75, reX: 1.0, reZ: 0.2, lsX: 0.7, leX: 1.35 + osc * 0.15, leZ: 1.0, hdY: -0.15 }); break;
+    case 'armL': Object.assign(q, { lsX: 0.75, leX: 1.0, leZ: 0.2, rsX: 0.7, reX: 1.35 + osc * 0.15, reZ: 1.0, hdY: 0.15 }); break;
+    case 'head': Object.assign(q, { lsX: 2.35 + o2 * 0.25, rsX: 2.35 + o2 * 0.25, leX: 1.75, reX: 1.75, leZ: 0.45, reZ: 0.45, lsZ: 0.3, rsZ: 0.3, hdX: 0.2 }); break;
+    case 'ears': Object.assign(q, { lsX: 0.35, rsX: 0.35, lsZ: 0.6, rsZ: 0.6, leX: 2.1, reX: 2.1, leZ: 0.4, reZ: 0.4, hdX: 0.05 }); break;
+    case 'footR': Object.assign(q, { spX: 0.75, rhX: 1.25, rk: 1.05, rsX: 0.95, reX: 0.35, lsX: 0.85, leX: 0.45, leZ: 0.3, hdX: 0.4, rw: osc * 0.3 }); break;
+    case 'footL': Object.assign(q, { spX: 0.75, lhX: 1.25, lk: 1.05, rsX: 0.85, reX: 0.45, reZ: 0.3, lsX: 0.95, leX: 0.35, hdX: 0.4, lw: osc * 0.3 }); break;
+  }
+  return q;
+}
+function wuduAt(t) { let acc = WUDU_T0; for (let i = 0; i < WUDU.length; i++) { const d = WUDU[i][1]; if (t < acc + d) return { i, lt: t - acc, k: WUDU[i][2], prevK: i ? WUDU[i - 1][2] : 'rest', cap: WUDU[i][0] }; acc += d; } return null; }
+function wuduPoseAt(t) { const w = wuduAt(t); if (!w) return null; return mixPose(wuduPose(w.prevK, w.lt), wuduPose(w.k, w.lt), easeS(w.lt / 0.8)); }
+const WUDU_END = WUDU_T0 + WUDU.reduce((a, w) => a + w[1], 0);
+let SALAH = [];
+function buildSalahSeq() {
+  SALAH = [['itidal', 2.5, 'Facing the Qibla, side by side'], ['takbir', 2.2, 'Takbir — “Allahu Akbar”'], ['qiyam', 7, 'Qiyam — standing'], ['ruku', 3.6, 'Ruku‘ — bowing'], ['itidal', 2.4, 'Rising from ruku‘'],
+    ['sujud', 3.4, 'Sujud — prostration'], ['jalsa', 2.2, 'Sitting between the two prostrations'], ['sujud', 3.4, 'The second sujud'], ['qiyam', 6, 'Standing for the second rak‘ah'], ['ruku', 3.4, 'Ruku‘'], ['itidal', 2.2, ''],
+    ['sujud', 3.2, 'Sujud'], ['jalsa', 2.0, ''], ['sujud', 3.2, 'Sujud'], ['jalsa', 5, 'Tashahhud — sitting'], ['salR', 1.6, 'Taslim — “As-salamu ‘alaykum wa rahmatullah”'], ['salL', 1.6, ''], ['dua', 9, 'A quiet du‘a — asking for forgiveness'], ['jalsa', 30, '']]
+    .map(([k, d, cap]) => ({ p: SP[k], d, cap, k }));
+}
+const SALAH_T0 = 107.5;
+const AP4 = [[-5.7, 36.3], [-2.0, 33.6], [-0.5, 31], [-0.5, 12], [-0.45, 9.2], [-0.4, 6.9], [3.8, 6.35]];
+const FP4 = [[-3.3, 36.3], [-0.4, 33.6], [0.5, 31], [0.5, 12], [0.5, 9.2], [0.6, 7.0], [5.0, 6.35]];
+const AP4b = [[3.8, 6.35], [8, 5.4], [13.89, 4.7]], FP4b = [[5.0, 6.35], [9, 6.2], [13.89, 5.9]];
+const AP4c = [[13.89, 4.7], [9, 4.4], [0.45, 4.6]], FP4c = [[13.89, 5.9], [9, 5.3], [-0.45, 4.6]];
+const AP4d = [[0.45, 4.6], [0.45, 2.0], [0.45, -16]], FP4d = [[-0.45, 4.6], [-0.45, 2.0], [-0.45, -16]];
+function mosqueActor(c, t, lag, P1, P2, P3, P4, side) {
+  const o = O.mosque; let p, x, z, yaw;
+  if (t < 24.5) { const w = walkOn(P1, 4.8 + lag * 0.5, 24.5, t); x = w.x; z = w.z; yaw = w.moving ? w.yaw : 0; p = walkPose(w.ph, w.amt, P({ hdX: 0.08 })); if (t < 4.8) { x = P1[0][0]; z = P1[0][1]; yaw = PI; } }
+  else if (t < 31.5) { x = P1[P1.length - 1][0]; z = P1[P1.length - 1][1]; yaw = 0; p = idlePose(t, side, P());
+    const d1 = win(t, 25 + lag, 26.6 + lag, 0.5), d2 = win(t, 26.8 + lag, 28.4 + lag, 0.5), th = 1.25, kn = 2.3;
+    const crouch = P({ lhX: th, rhX: th, lk: kn, rk: kn, hipY: legH(th, kn), hipZ: legZ(th, kn), spX: 0.55, rsX: 1.1, reX: 0.4, lsX: 1.0, leX: 0.4, hdX: 0.4 });
+    p = mixPose(p, crouch, Math.max(d1, d2)); }
+  else if (t < 37) { const w = walkOn(P2, 31.5, 36.8, t); x = w.x; z = w.z; yaw = w.moving ? w.yaw : HP; p = walkPose(w.ph, w.amt, P()); }
+  else if (t < 74) { x = 13.89; z = P2[P2.length - 1][1]; yaw = HP; const sit = sitPose({ spX: 0.15, hdX: 0.15 }); const wp = wuduPoseAt(t - lag); p = mixPose(P(), sit, sstep(37, 38.2, t)); if (wp) p = mixPose(p, wp, sstep(WUDU_T0 - 0.3, WUDU_T0 + 0.5, t - lag)); }
+  else if (t < 89.5) { if (t < 75.3) { x = 13.89; z = P2[P2.length - 1][1]; yaw = HP; p = mixPose(sitPose(), P(), sstep(74, 75.3, t)); } else { const w = walkOn(P3, 75.5, 82.5, t); x = w.x; z = w.z; yaw = w.moving ? w.yaw : PI; p = walkPose(w.ph, w.amt, P()); } }
+  else if (t < 101) { const w = walkOn(P4, 89.5, 101, t); x = w.x; z = w.z; yaw = w.moving ? w.yaw : PI; p = walkPose(w.ph, w.amt * 0.9, P({ hdX: -0.05 })); p.hdY += Math.sin(t * 0.6 + side) * 0.35 * w.amt; }
+  else { x = P4[P4.length - 1][0]; z = P4[P4.length - 1][1]; yaw = PI; const r = seqPose(SALAH, Math.max(0, t - SALAH_T0 - lag), SP.itidal); p = r.pose; if (t < SALAH_T0) p = mixPose(idlePose(t, side, SP.itidal), SP.itidal, sstep(SALAH_T0 - 1, SALAH_T0, t)); }
+  place(c, o, x, z, yaw); return p;
+}
+SC.push({
+  num: '04', title: 'The Mosque', theme: 'Peace · repentance · returning to Allah', dur: 172, set: 'mosque',
+  init: () => ({}),
+  keys: () => { const o = O.mosque; return [
+    kk(o, 0, [-16, 2.4, 46], [0, 7, 4], 42), kk(o, 6, [-9, 2.0, 40], [-2, 4, 12], 44), kk(o, 12, [-3.6, 1.7, 27], [0, 2.4, 10], 44), kk(o, 18, [1.9, 1.65, 16.5], [0, 2.0, 8], 44), kk(o, 23.6, [0.4, 1.7, 11.8], [0.4, 1.6, 6], 46),
+    kk(o, 24, [-1.8, 2.3, 4.4], [4.3, 0.9, 7], 44, { cut: true }), kk(o, 28.5, [-1.2, 2.0, 4.8], [4.4, 1.1, 6.8], 44), kk(o, 31.5, [1.2, 1.75, 4.2], [-0.5, 2.2, 3.0], 44), kk(o, 37.6, [9.2, 1.9, 3.0], [13.5, 0.9, 5.3], 44),
+    kk(o, 38.2, [11.3, 1.35, 2.5], [14.0, 0.85, 5.2], 40, { cut: true }), kk(o, 45, [11.9, 1.25, 3.1], [14.1, 0.85, 4.9], 38), kk(o, 51, [12.9, 1.15, 3.55], [14.2, 0.95, 4.75], 30), kk(o, 58, [12.5, 1.35, 7.9], [14.0, 0.85, 5.4], 36), kk(o, 66, [12.2, 0.95, 2.9], [14.2, 0.45, 4.9], 36), kk(o, 74.6, [11, 1.7, 3.2], [13.6, 1.0, 5.2], 42),
+    kk(o, 75, [6.5, 1.8, 7.2], [1.5, 1.4, 4.4], 44, { cut: true }), kk(o, 82, [0.0, 1.66, 7.6], [0, 1.8, 3.0], 46), kk(o, 85.5, [0.0, 1.62, 7.0], [0, 1.9, 0], 46), kk(o, 90, [0, 1.7, 5.4], [0, 2.6, -8], 48), kk(o, 95, [0, 1.8, 1.0], [0, 4.0, -14], 50), kk(o, 100, [0.4, 4.8, -3.0], [0, 5.5, -16], 52), kk(o, 104.6, [-2.6, 6.4, -5.6], [0, 3.0, -16.5], 50),
+    kk(o, 105, [0, 1.55, -9.0], [0, 1.0, -18], 42, { cut: true }), kk(o, 118, [0.3, 1.45, -10.4], [0, 0.9, -18], 42),
+    kk(o, 118.5, [5.6, 1.05, -14.6], [0, 0.7, -16.3], 38, { cut: true }), kk(o, 134, [5.0, 1.25, -17.6], [0, 0.7, -16], 38),
+    kk(o, 134.5, [-6, 4.6, -5.5], [0, 0.5, -17], 40, { cut: true }), kk(o, 150, [-4.5, 3.6, -9], [0, 0.6, -17], 40),
+    kk(o, 150.5, [2.2, 1.0, -12.6], [0.2, 0.6, -16.3], 34, { cut: true }), kk(o, 162, [1.6, 1.15, -12.5], [0.3, 0.9, -16.2], 34), kk(o, 172, [0, 5, -1], [0, 2.5, -18], 46)]; },
+  enter() { outfitClub(); barefoot(ADAM, false); barefoot(YUSUF, false); ADAM.root.visible = YUSUF.root.visible = true; ADAM.phone.visible = false; CAR.g.visible = true; },
+  update(t, dt, st) {
+    const M_ = SETS.mosque, o = O.mosque;
+    // the car pulls up at the gate
+    const cz = lerp(56, 36.3, easeOut(clamp(t / 4.6), 2.2)); CAR.g.position.set(o.x - 4.5, 0, o.z + cz); CAR.g.rotation.set(0, HP, 0); CAR.spin(-cz); CAR.setLights(t < 5.5);
+    CAR.g.visible = t < 24;
+    const bare = t > 27; barefoot(ADAM, bare); barefoot(YUSUF, bare); M_.ourShoes.visible = t > 28.4;
+    ADAM.root.visible = YUSUF.root.visible = t > 4.6;
+    let ap = mosqueActor(ADAM, t, 0.5, AP4, AP4b, AP4c, AP4d, 1), fp = mosqueActor(YUSUF, t, 0, FP4, FP4b, FP4c, FP4d, 3);
+    // looking around in the vestibule, Yusuf gestures to the wudu area
+    if (t > 28.5 && t < 31.6) { ap.hdY = Math.sin((t - 28.5) * 1.1) * 0.9 - 0.4; ap.hdX = -0.12; ap.eyeX = ap.hdY * 0.6; fp = mixPose(fp, Object.assign({}, fp, { lsX: 0.5, lsZ: 0.95, leX: 0.3, hdY: 0.6, smile: 0.4 }), win(t, 28.8, 31.4, 0.5)); }
+    // pause at the closed doors: hand on his back
+    if (t > 82.3 && t < 89.5) { const k = win(t, 82.6, 88.8, 0.8); fp = mixPose(fp, Object.assign({}, fp, { rsX: 0.35, rsZ: 0.55, reX: 0.45, reZ: 0.1, hdY: -0.45, smile: 0.35 }), k); ap.hdX = lerp(ap.hdX, 0.45, win(t, 82.8, 86.5, 1)); ap.sad = 0.55 * win(t, 82, 87, 1); }
+    if (t > 101 && t < 107.5) { ap = headTo(ap, ADAM, YUSUF.root.position.x, YUSUF.root.position.z, win(t, 101.2, 106.5, 0.6) * 0.7); fp = headTo(fp, YUSUF, ADAM.root.position.x, ADAM.root.position.z, win(t, 103.5, 107.2, 0.6) * 0.7); fp.smile = 0.45 * win(t, 103.5, 107.2, 0.6); }
+    if (t > 162) { ap.smile = 0.5 * sstep(163, 166, t); ap.sad = 0; ap.blink = 0.55; }
+    applyPose(ADAM, ap, dt); applyPose(YUSUF, fp, dt);
+    // taps and water
+    const tapOn = sstep(38.6, 39.2, t) * (1 - sstep(72.8, 73.6, t)); st.tap = tapOn;
+    M_.streams.forEach((s, i) => (s.visible = i > 0 && tapOn > 0.05)); M_.splash.material.uniforms.opacity.value = 0.6 * tapOn;
+    // doors: warm light leaking, then opening
+    const open = easeIO(clamp((t - 85.5) / 4.6)); M_.doors[0].rotation.y = open * 1.75; M_.doors[1].rotation.y = -open * 1.75;
+    const inside = sstep(85.8, 89.8, t); st.inside = inside;
+    M_.leakM.color.set('#ffc874').multiplyScalar(5 * (1 - open)); M_.leakPool.material.opacity = 0.28 * sstep(20, 30, t) + 0.5 * inside;
+    setHall(M_, Math.max(inside, 0.0), t);
+  },
+  env: (t, st) => { if (t < 24) return PAL.mosqueNight; return mixEnv(PAL.vest, PAL.hall, st.inside || 0); },
+  audio: (t, st) => { if (t < 24) return { wind: 0.22, traffic: 0.08, car: 0.25 * (1 - sstep(3, 6, t)) }; const ins = st.inside || 0; return { room: lerp(0.22, t > SALAH_T0 - 2 ? 0.05 : 0.1, ins), water: 0.5 * (st.tap || 0), wind: 0.05 * (1 - ins) }; },
+  sfx: [[0.3, 'thump'], [83.3, 'thump'], [85.6, 'door']],
+  flash: t => 0.65 * win(t, 0.1, 2.4, 0.3) * (0.55 + 0.45 * Math.sin(t * 23)) + 0.5 * win(t, 83.2, 84.3, 0.2) * (0.5 + 0.5 * Math.sin(t * 31)),
+  subs: [[19.2, 22.6, '', 'They slipped off their shoes at the door.', 'note'], [101.4, 103.6, 'Adam', 'I don’t know if I remember how.'], [103.8, 107.3, 'Yusuf', 'That’s okay. Just follow me. Allah knows what’s in your heart.']],
+  narr: t => (t > 92 && t < 104 ? 'They thought they had to become a better person before returning. But the first step was simply returning.' : ''),
+  cap: t => { const w = wuduAt(t); if (w && t > WUDU_T0) return 'Wudu · ' + w.cap; if (t > SALAH_T0 - 1) { const r = seqPose(SALAH, t - SALAH_T0, SP.itidal); return r.step.cap || ''; } return ''; },
+  hot: [{ label: 'Wudu', pos: () => wpos(SETS.mosque.G, 14.25, 1.05, 4.7), when: t => t > 38 && t < 72, act: () => showInfo('Wudu — the washing before prayer', 'With intention in the heart and “Bismillah”: wash the hands, rinse the mouth and nose, wash the face, wash the arms to the elbows (right, then left), wipe over the head and the ears, then wash the feet to the ankles (right, then left). Most parts are washed three times — calm, careful, and in order.') }]
+});
+
+/* ================================================== SCENE 05 — THE NEW BEGINNING (montage) */
+const BEATS5 = [0, 7, 13, 20, 27, 31, 39, 44, 50, 55, 66];
+SC.push({
+  num: '05', title: 'The New Beginning', theme: 'Growth · consistency · finding peace', dur: 66, set: 'home',
+  init: () => ({}),
+  keys: () => { const o = O.home, p = O.park; return [
+    kk(o, 0, [-0.6, 1.25, 1.4], [-2.8, 0.7, -0.3], 40), kk(o, 6.8, [-0.9, 1.35, 1.0], [-2.8, 0.9, -0.5], 40),
+    kk(o, 7, [1.9, 1.5, 0.4], [3.6, 1.0, 1.6], 40, { cut: true }), kk(o, 12.8, [2.2, 1.55, 0.75], [3.6, 1.15, 1.6], 38),
+    kk(o, 13, [-1.6, 1.1, 0.2], [0.8, 0.6, -2.4], 42, { cut: true }), kk(o, 19.8, [-1.2, 1.0, -0.4], [0.8, 0.45, -2.4], 42),
+    kk(o, 20, [-0.4, 1.6, 1.8], [-2.8, 0.6, 0], 42, { cut: true }), kk(o, 23.4, [-0.6, 1.5, 1.6], [-2.8, 0.6, -0.1], 42),
+    kk(o, 23.6, [0.3, 1.2, 0.6], [-1.9, 0.9, -0.1], 38, { cut: true }), kk(o, 26.8, [0.1, 1.15, 0.35], [-1.9, 0.85, -0.1], 38),
+    kk(o, 27, [0.3, 1.3, 0.9], [-1.8, 1.0, -0.2], 38, { cut: true }), kk(o, 30.8, [0.15, 1.28, 0.7], [-1.8, 1.0, -0.25], 36),
+    kk(o, 31, [1.2, 1.15, -0.9], [2.6, 0.55, -2.55], 38, { cut: true }), kk(o, 38.8, [1.55, 1.0, -1.35], [2.6, 0.55, -2.6], 36),
+    kk(o, 39, [0.4, 1.35, 0.8], [-1.75, 1.0, -0.2], 38, { cut: true }), kk(o, 43.8, [0.2, 1.3, 0.6], [-1.75, 1.0, -0.2], 36),
+    kk(p, 44, [2.5, 1.0, 18], [0, 1.5, 0], 40, { cut: true, set: 'home' }), kk(p, 49.8, [3.5, 2.2, 10], [0, 2, -20], 42),
+    kk(o, 50, [2.0, 1.05, -3.2], [0.8, 0.85, -1.95], 36, { cut: true }), kk(o, 54.8, [1.8, 1.1, -3.3], [0.8, 0.9, -1.95], 34),
+    kk(p, 55, [5.5, 1.2, -4.5], [2.6, 0.9, 0], 40, { cut: true, set: 'home' }), kk(p, 66, [7, 3.5, -8], [1, 1.5, 8], 42)]; },
+  enter() { outfitModest(); barefoot(ADAM, true); ADAM.root.visible = true; YUSUF.root.visible = false; CAR.g.visible = false; ADAM.phone.visible = false; },
+  update(t, dt, st) {
+    const H = SETS.home, o = O.home, pk = O.park; let p = P(); ADAM.phone.visible = false; YUSUF.root.visible = false; barefoot(ADAM, true);
+    H.sinkStream.visible = false; H.lamp.intensity = 0; H.alarm.intensity = 0; H.nightPhoneM.color.set('#9cc4ff').multiplyScalar(0.15); H.lampM.color.set('#ffd9a0').multiplyScalar(0.3);
+    H.sunShaft.material.uniforms.opacity.value = 0; H.dust.material.uniforms.opacity.value = 0; H.page.rotation.z = 0;
+    const lyingAt = (lt, wake) => { // lying in bed → sitting up
+      const s = sstep(wake, wake + 2.4, lt); place(ADAM, o, -2.9, -0.05, 0);
+      p = P({ hipY: 0.66, rootX: lerp(-HP, 0, s), lhX: lerp(0, HP, s), rhX: lerp(0, HP, s), lk: 0, rk: 0, la: 0.3, ra: 0.3, lsX: lerp(0, 0.4, s), rsX: lerp(0, 0.4, s), leX: 0.3, reX: 0.3, blink: lt < wake - 0.6 ? 1 : 0, hdX: lerp(-0.1, 0.2, s) });
+    };
+    const bedEdge = extra => { place(ADAM, o, -1.6, -0.1, HP); p = sitPose(Object.assign({ hdX: 0.2 }, extra)); };
+    if (t < 7) { // Week 1 — the alarm before Fajr
+      lyingAt(t, 3.0); const ring = win(t, 0.4, 3.2, 0.2); H.alarm.intensity = 1.2 * ring * (0.6 + 0.4 * Math.sin(t * 12)); H.nightPhoneM.color.set('#9cc4ff').multiplyScalar(0.3 + 2.4 * ring);
+      if (t > 5.2) { p.rsX = lerp(p.rsX, 0.6, sstep(5.2, 5.8, t)); p.reX = lerp(p.reX, 2.3, sstep(5.2, 5.8, t)); p.reZ = 0.5; }
+    } else if (t < 13) { // wudu at the sink
+      place(ADAM, o, 3.18, 1.6, HP); const lt = t - 7, osc = Math.sin(lt * 5);
+      p = P({ spX: 0.3, hdX: 0.2, lsX: 0.85, rsX: 0.85, leX: 0.9 + osc * 0.08, reX: 0.9 - osc * 0.08, leZ: 0.4, reZ: 0.4 });
+      if (lt > 3) p = mixPose(p, P({ spX: 0.35, lsX: 0.5, rsX: 0.5, leX: 2.25 + Math.sin(lt * 3) * 0.12, reX: 2.25 + Math.sin(lt * 3) * 0.12, leZ: 0.5, reZ: 0.5, blink: 0.9 }), sstep(3, 3.6, lt));
+      H.sinkStream.visible = true;
+    } else if (t < 20) { // praying at dawn
+      place(ADAM, o, 0.8, -1.85, PI);
+      const seq = [{ p: SP.qiyam, d: 2.2 }, { p: SP.ruku, d: 1.6 }, { p: SP.sujud, d: 2.4 }, { p: SP.jalsa, d: 9 }];
+      p = seqPose(seq, t - 13, SP.itidal).pose;
+      H.sunShaft.material.uniforms.opacity.value = 0.05 * sstep(14, 19, t); H.dust.material.uniforms.opacity.value = 0.5 * sstep(14, 19, t);
+    } else if (t < 23.6) { // Week 3 — he slept through it
+      lyingAt(-5, 0); p.blink = 1; p.lsX = 0.9; p.leX = 1.6; p.hdY = 0.4 * sstep(21.5, 22.5, t);
+    } else if (t < 27) { bedEdge({ spX: 0.45, hdX: 0.55, lsX: 0.85, rsX: 0.85, leX: 2.0, reX: 2.0, leZ: 0.6, reZ: 0.6, sad: 0.9, blink: 0.5 }); }
+    else if (t < 31) { // night — setting alarms
+      bedEdge({ sad: 0.1 }); p = phonePose(p, t, true); ADAM.phone.visible = true; H.lamp.intensity = 3.2; H.lampM.color.set('#ffd9a0').multiplyScalar(3);
+    } else if (t < 39) { // Month 2 — reading the Qur'an
+      place(ADAM, o, 2.6, -2.1, PI); p = Object.assign({}, SP.read, { blink: 0.3 + 0.2 * Math.sin(t) }); p.hdY = Math.sin(t * 0.5) * 0.05;
+      const turn = easeIO(clamp((t - 35) / 1.4)); H.page.rotation.z = turn * 2.9; if (t > 34.6 && t < 36.6) { p.rsX = 0.95; p.reX = 1.1; p.reZ = 0.45; }
+      H.sunShaft.material.uniforms.opacity.value = 0.06; H.dust.material.uniforms.opacity.value = 0.55;
+    } else if (t < 44) { // the old group chat
+      bedEdge({ smile: 0.15 }); p = phonePose(p, t, t > 41 && t < 42); ADAM.phone.visible = true; p.smile = 0.3 * sstep(42, 43, t);
+    } else if (t < 50) { // walking to the mosque at sunrise
+      const w = walkOn([[0, 14], [0, 3]], 44, 50, t); place(ADAM, pk, w.x, w.z, PI); p = walkPose(w.ph, Math.max(0.6, w.amt), P({ smile: 0.25 })); barefoot(ADAM, false);
+    } else if (t < 55) { // du'a
+      place(ADAM, o, 0.8, -1.85, PI); p = Object.assign({}, SP.dua, { smile: 0.3 }); H.sunShaft.material.uniforms.opacity.value = 0.07; H.dust.material.uniforms.opacity.value = 0.6;
+    } else { // Month 3 — with Yusuf on the bench
+      barefoot(ADAM, false); YUSUF.root.visible = true; place(ADAM, pk, 2.1, -0.44, PI); place(YUSUF, pk, 3.1, -0.44, PI);
+      const laugh = Math.max(0, Math.sin(t * 2.2)) * win(t, 57, 62, 1);
+      p = sitPose({ smile: 0.7, hdY: -0.5, hdX: 0.05 - laugh * 0.12, spX: 0.05 + laugh * 0.08 });
+      const fp = sitPose({ smile: 0.8, hdY: 0.45, hdX: -laugh * 0.1, lsX: lerp(0.55, 1.1, win(t, 60, 64, 1)), lsZ: lerp(0.13, 0.75, win(t, 60, 64, 1)), leX: 0.4 });
+      applyPose(YUSUF, fp, dt);
+    }
+    applyPose(ADAM, p, dt);
+    st.beat = BEATS5.findIndex((b, i) => t >= b && t < BEATS5[i + 1]);
+  },
+  env: (t, st) => {
+    if (t < 7) return PAL.predawn; if (t < 13) return mixEnv(PAL.predawn, PAL.sunrise, 0.15); if (t < 20) return mixEnv(PAL.predawn, PAL.sunrise, sstep(13, 19.5, t));
+    if (t < 27) return PAL.day; if (t < 31) return PAL.night; if (t < 39) return PAL.sunrise; if (t < 44) return mixEnv(PAL.day, PAL.sunrise, 0.5);
+    if (t < 50) return PAL.park; if (t < 55) return PAL.sunrise; return PAL.park; },
+  audio: t => ({ room: t < 44 || (t > 50 && t < 55) ? 0.12 : 0, birds: t > 15 && t < 20 ? 0.12 : t < 27 && t > 20 ? 0.45 : t > 44 && !(t > 50 && t < 55) ? 0.55 : t > 31 && t < 39 ? 0.15 : 0, wind: t > 44 && !(t > 50 && t < 55) ? 0.18 : 0, water: t > 7 && t < 13 ? 0.35 : 0, traffic: t > 20 && t < 27 ? 0.12 : 0 }),
+  sfx: [[0.5, 'alarm'], [39.8, 'buzz']],
+  cap: t => (t < 7 ? 'Week 1 · 5:04 am' : t > 20 && t < 27 ? 'Week 3' : t > 31 && t < 39 ? 'Month 2' : t > 55 ? 'Month 3' : ''),
+  subs: [[20.4, 23.4, '', 'Some mornings, he slept through Fajr.', 'note'], [23.8, 26.9, '', 'It hurt. But he didn’t give up.', 'note'], [27.3, 30.8, '', 'He set one alarm. Then two. Then three.', 'note'], [31.4, 34.6, '', 'A page a day. Sometimes just a single verse.', 'note']],
+  narr: t => (t > 45 && t < 57 ? 'Change doesn’t happen overnight. Sometimes it’s one prayer, one du‘a and one step closer to Allah at a time.' : ''),
+  phone: t => (t >= 39.4 && t < 44 ? { id: 's5', name: 'The Boys 🍾', time: '11:40', status: 'Kay, Jordan, Sami, +4', av: 'TB', t: t - 39.4, items: [
+    { at: 0.4, me: 0, text: 'NOVA saturday?? guest list sorted 🔥' }, { at: 1.4, me: 0, text: 'adam u in?' }, { at: 3.0, sys: 1, text: 'You muted this chat' }] } : null),
+  hot: [{ label: 'The Qur’an', pos: () => wpos(SETS.home.book, 0, 0.05, 0), when: t => t > 31.2 && t < 38.8, act: () => showInfo('One page at a time', 'He started with a single page after Fajr — the Arabic, then the translation. Some days he understood more than others. When he had questions, he asked Yusuf, or the imam after salah. It never felt like homework. It felt like being spoken to.') }]
+});
+
+/* ================================================== SCENE 06 — FAJR */
+const AP6a = [[-20, 5.6], [1.2, 5.6]], AP6b = [[1.2, 5.6], [36, 5.6], [39.4, 1.4], [41.6, 0.3]];
+SC.push({
+  num: '06', title: 'Fajr', theme: 'Reflection · redemption · hope', dur: 82, set: 'street',
+  init: () => ({ click: null }),
+  keys: () => { const o = O.street; return [kk(o, 0, [-14, 1.5, 0.5], [-19, 1.2, 5.6], 42), kk(o, 9, [-4, 1.5, 1.6], [-1.5, 1.3, 5.6], 42), kk(o, 13, [0.0, 1.6, 3.6], [1.6, 1.8, 7.5], 40),
+    kk(o, 17.5, [1.45, 1.86, 4.75], [1.2, 1.3, 5.98], 34), kk(o, 21, [2.6, 1.62, 7.0], [1.2, 1.6, 5.6], 32), kk(o, 24, [-1, 1.6, 2.0], [6, 1.3, 5.6], 44), kk(o, 32, [3, 2.6, 1.0], [16, 1.5, 4.5], 44),
+    kk(o, 40, [14, 8, -2], [40, 6, 0], 46), kk(o, 48, [24, 5, -1.5], [41, 3, 0], 46), kk(o, 60, [22, 3.2, -2.2], [42, 5, 0], 46), kk(o, 82, [21, 3.6, -2.4], [42, 6.5, 0], 46)]; },
+  enter() { outfitModest(); barefoot(ADAM, false); ADAM.root.visible = true; YUSUF.root.visible = false; CAR.g.visible = false; streetState('dawn'); },
+  update(t, dt, st) {
+    const o = O.street, S = SETS.street; const rev = st.rev = Math.min(st.click ?? 99, 17.5);
+    let p;
+    if (t < 23.5) {
+      const w = walkOn(AP6a, 0, 10.5, t); place(ADAM, o, w.x, w.z, w.moving ? w.yaw : lerpAngle(HP, 0, sstep(10.5, 12, t)));
+      p = w.moving ? walkPose(w.ph, w.amt, P({ smile: 0.1 })) : idlePose(t, 5, P({ hdX: -0.05 }));
+      if (!w.moving) { p.hdY = 0.15 * Math.sin(t * 0.4); p.sad = 0.3 * win(t, 12, 15.5, 1); }
+      const hold = sstep(15.4, 16.4, t) * (1 - sstep(22.4, 23.4, t)); p = mixPose(p, phonePose(p, t), hold);
+      const sm = sstep(rev + 1.6, rev + 3.2, t); p.smile = Math.max(p.smile, 0.85 * sm); p.sad *= 1 - sm; ADAM.phone.visible = t > 15.8 && t < 23; ADAM.phoneLight.intensity = 0.15 * hold;
+      if (t > rev + 3.4 && t < 22.4) { p.hdX = lerp(p.hdX, 0.05, sstep(rev + 3.4, rev + 4.4, t)); p.eyeY = 0.1; }
+    } else {
+      const w = walkOn(AP6b, 23.5, 49.5, t); place(ADAM, o, w.x, w.z, w.moving ? w.yaw : HP); p = walkPose(w.ph, w.amt, P({ smile: 0.45 })); ADAM.phone.visible = false;
+    }
+    ADAM.root.visible = t < 49.2; applyPose(ADAM, p, dt);
+    // streetlights switch off one by one
+    S.lampsSorted.forEach((L, i) => setLamp(L, 1 - sstep(5 + i * 2.6, 6 + i * 2.6, t)));
+    // memory of the night: the sign flickers back to life for a moment
+    const mem = win(t, 12.6, 14.6, 0.3); S.signM.opacity = mem * (0.5 + 0.5 * Math.sin(t * 40)); S.doorM.color.set('#a23cff').multiplyScalar(mem * 2); S.clubLight.intensity = 8 * mem; S.clubPool.material.opacity = 0.5 * mem;
+    const door = sstep(46, 49.5, t); S.mosque.doorGlow.color.set('#ffcf8a').multiplyScalar(1.0 + 1.5 * door); S.mosque.light.intensity = 4 + 8 * door;
+    updateTraffic(gT * 0.7, false);
+    st.k = sstep(0, 70, t);
+  },
+  env: (t, st) => mixEnv(PAL.dawn1, PAL.dawn2, st.k || 0),
+  audio: t => ({ wind: 0.18, birds: lerp(0.2, 0.55, sstep(5, 40, t)) * (t > 38 ? 0.6 : 1), traffic: 0.08, club: 0.4 * win(t, 12.6, 14.6, 0.3), clubCut: 300 }),
+  sfx: [[12.7, 'thump'], [15.0, 'buzz']],
+  flash: t => 0.4 * win(t, 12.6, 14.6, 0.3) * (0.5 + 0.5 * Math.sin(t * 27)),
+  subs: [[38, 47, '', '[ The Fajr Adhan begins ]', 'note']],
+  narr: t => (t > 51 && t < 60.5 ? 'You are never too far gone to return to Allah.' : ''),
+  phone: (t, st) => (t >= st.rev && t < st.rev + 5.5 ? { id: 's6', name: 'Yusuf', time: '5:12', status: 'online', t: t - st.rev, items: [{ at: 0.6, me: 0, text: 'Fajr tomorrow?' }] } : null),
+  fade: t => sstep(75, 79.5, t),
+  final: t => t,
+  hot: [{ label: 'Open the phone', pos: () => wpos(ADAM.phone, 0, 0.06, 0), when: (t, st) => t > 15.8 && t < 17.5 && st.click == null, act: (st, t) => { st.click = t; } }]
+});
+
+/* ---------- street lighting states ---------- */
+function setLamp(L, k) {
+  L.bulbM.color.set('#ffd9a0').multiplyScalar(0.25 + 3.95 * k); L.hl.material.opacity = 0.55 * k; L.pl.material.opacity = 0.42 * k; if (L.light) L.light.intensity = 22 * k;
+}
+function streetState(mode) {
+  const S = SETS.street; const night = mode === 'night';
+  S.lamps.forEach(L => setLamp(L, 1));
+  S.shutter.visible = !night; S.signM.opacity = night ? 1 : 0; S.doorM.color.set('#a23cff').multiplyScalar(night ? 2.2 : 0); S.clubLight.intensity = night ? 8 : 0; S.clubPool.material.opacity = night ? 0.5 : 0;
+  S.canopyStrip.material.color.set('#ff3db8').multiplyScalar(night ? 2.2 : 0.2);
+  facadeMats.forEach(m => (m.emissiveIntensity = night ? 1.3 : 0.35));
+  S.mosque.light.intensity = night ? 0 : 6; S.mosque.ringM.color.set('#7dffc0').multiplyScalar(night ? 1.4 : 0.6); S.mosque.doorGlow.color.set('#ffcf8a').multiplyScalar(night ? 0.4 : 1.2);
+}
+
+/* ================================================================
+   7. DIRECTOR — camera splines, transitions, HUD, input, main loop
+   ================================================================ */
+const $ = id => document.getElementById(id);
+const UI = { fade: $('fade'), flash: $('flash'), hud: $('hud'), num: $('sceneNum'), title: $('sceneTitle'), theme: $('sceneTheme'), tag: $('sceneTag'), cap: $('caption'),
+  subs: $('subs'), subWho: $('subWho'), subText: $('subText'), narr: $('narr'), hint: $('hint'), prev: $('prev'), next: $('next'), mute: $('mute'),
+  hots: $('hotspots'), info: $('info'), infoT: $('infoT'), infoP: $('infoP'), phone: $('phone'), phMsgs: $('phMsgs'), phName: $('phName'), phTime: $('phTime'), phStatus: $('phStatus'), phAv: $('phAv'),
+  final: $('final'), again: $('again'), bars: [...document.querySelectorAll('#progress b')] };
+
+/* Build Catmull-Rom shot groups from each scene's camera keys. */
+function prepScene(S) {
+  const keys = S.keys(); S.groups = [];
+  keys.forEach((k, i) => { if (i === 0 || k.cut) S.groups.push({ t0: k.t, keys: [], set: k.set || S.set }); S.groups[S.groups.length - 1].keys.push(k); });
+  S.groups.forEach(g => { if (g.keys.length > 1) { g.cp = new THREE.CatmullRomCurve3(g.keys.map(k => k.p), false, 'centripetal'); g.cl = new THREE.CatmullRomCurve3(g.keys.map(k => k.l), false, 'centripetal'); } });
+}
+const _cam = { p: V(), l: V(), fov: 45, set: '', dip: 0 };
+function camAt(S, t) {
+  let gi = 0; for (let i = 0; i < S.groups.length; i++) if (t >= S.groups[i].t0) gi = i;
+  const g = S.groups[gi], K = g.keys, n = K.length;
+  _cam.set = g.set; _cam.dip = 0;
+  for (let i = 1; i < S.groups.length; i++) _cam.dip = Math.max(_cam.dip, 1 - Math.abs(t - S.groups[i].t0) / 0.42);
+  if (n === 1 || t <= K[0].t) { _cam.p.copy(K[0].p); _cam.l.copy(K[0].l); _cam.fov = K[0].fov; return _cam; }
+  if (t >= K[n - 1].t) { _cam.p.copy(K[n - 1].p); _cam.l.copy(K[n - 1].l); _cam.fov = K[n - 1].fov; return _cam; }
+  let i = 0; while (i < n - 2 && t >= K[i + 1].t) i++;
+  let u = (t - K[i].t) / (K[i + 1].t - K[i].t);
+  if (n === 2) u = easeS(u); else if (i === 0) u = u * u * (2 - u); else if (i === n - 2) u = 1 - (1 - u) * (1 - u) * (1 + u);
+  const s = (i + u) / (n - 1);
+  g.cp.getPoint(s, _cam.p); g.cl.getPoint(s, _cam.l); _cam.fov = lerp(K[i].fov, K[i + 1].fov, easeS(u));
+  return _cam;
+}
+let visibleSet = '';
+function showSet(name) { if (name === visibleSet) return; visibleSet = name; for (const k in SETS) SETS[k].G.visible = (k === name); }
+
+/* ---------- environment application ---------- */
+function applyEnv(e, focus) {
+  skyU.top.value.copy(e.skyT); skyU.mid.value.copy(e.skyM); skyU.bot.value.copy(e.skyB); skyU.sunDir.value.copy(e.sunD); skyU.sunCol.value.copy(e.sunC); skyU.sunAmt.value = e.sunA; skyU.stars.value = e.stars;
+  scene.fog.color.copy(e.fogC); scene.fog.density = e.fogD;
+  hemi.color.copy(e.hemS); hemi.groundColor.copy(e.hemG); hemi.intensity = e.hemI;
+  key.color.copy(e.keyC); key.intensity = e.keyI; key.target.position.copy(focus); key.position.copy(focus).add(_v.copy(e.keyP).normalize().multiplyScalar(60));
+  rim.color.copy(e.rimC); rim.intensity = e.rimI; rim.target.position.copy(focus); rim.position.copy(focus).add(e.rimP);
+  renderer.toneMappingExposure = e.exp; bloom.strength = e.bS; bloom.radius = e.bR; bloom.threshold = e.bT;
+  const gu = grade.uniforms; gu.tint.value.copy(e.tint); gu.lift.value.copy(e.lift); gu.sat.value = e.sat; gu.vig.value = e.vig; gu.blur.value = e.blur;
+}
+const _v = V();
+
+/* ---------- state ---------- */
+let cur = 0, sT = 0, trans = null, started = false, gT = 0, last = performance.now();
+const camP = V(0, 2, 10), camL = V(), par = { x: 0, y: 0, tx: 0, ty: 0 };
+let camFov = 45, camOverride = null;
+function enterScene(i) {
+  cur = i; sT = 0; const S = SC[i]; S.st = S.init ? S.init() : {}; S.prevT = -1;
+  hideInfo(); UI.phone.classList.remove('on'); PHS.id = ''; PHS.key = '';
+  S.enter && S.enter();
+  UI.num.textContent = S.num; UI.title.textContent = S.title; UI.theme.textContent = S.theme;
+  UI.tag.classList.remove('on'); void UI.tag.offsetWidth; UI.tag.classList.add('on'); clearTimeout(enterScene.tm); enterScene.tm = setTimeout(() => UI.tag.classList.remove('on'), 7000);
+  UI.prev.disabled = i === 0; UI.next.disabled = i === SC.length - 1; UI.next.classList.remove('pulse');
+  UI.final.querySelectorAll('*').forEach(e => e.classList.remove('on'));
+  setText(UI.narr, ''); setSub(null); setText(UI.cap, '');
+}
+function go(i) {
+  if (i < 0 || i >= SC.length || i === cur || trans) return;
+  const dolly = Math.min(cur, i) === 1 && Math.max(cur, i) === 2;
+  if (dolly) {
+    const p0 = camP.clone(), l0 = camL.clone(), f0 = camFov; enterScene(i); const c = camAt(SC[i], 0);
+    const mid = p0.clone().lerp(c.p, 0.5).add(V(0, 2.6, 0));
+    trans = { type: 'dolly', t: 0, dur: 3.4, curve: new THREE.CatmullRomCurve3([p0, mid, c.p.clone()], false, 'centripetal'), l0, l1: c.l.clone(), f0, f1: c.fov };
+  } else trans = { type: 'fade', t: 0, to: i, sw: false };
+}
+
+/* ---------- HUD helpers ---------- */
+function setText(el, txt) { if (el._t === txt) return; el._t = txt; if (txt) { el.textContent = txt; el.classList.add('on'); } else el.classList.remove('on'); }
+function setSub(s) { const k = s ? s.join('|') : ''; if (UI.subs._k === k) return; UI.subs._k = k; if (!s) { UI.subs.classList.remove('on'); return; } UI.subWho.textContent = s[2]; UI.subText.textContent = s[3]; UI.subs.classList.toggle('note', s[4] === 'note'); UI.subs.classList.add('on'); }
+let infoAt = 0;
+function showInfo(title, text) { UI.infoT.textContent = title; UI.infoP.textContent = text; UI.info.classList.add('on'); infoAt = performance.now(); clearTimeout(showInfo.tm); showInfo.tm = setTimeout(hideInfo, 12000); }
+function hideInfo() { UI.info.classList.remove('on'); }
+/* phone overlay renderer */
+const PHS = { id: '', key: '', count: 0 };
+function renderPhone(spec) {
+  if (!spec) { UI.phone.classList.remove('on'); return; }
+  if (PHS.id !== spec.id) { PHS.id = spec.id; PHS.key = ''; PHS.count = 0; UI.phName.textContent = spec.name; UI.phTime.textContent = spec.time; UI.phStatus.textContent = spec.status; UI.phAv.textContent = spec.av || spec.name[0]; }
+  UI.phone.classList.add('on');
+  const vis = spec.items.filter(it => spec.t >= it.at && (!it.until || spec.t < it.until));
+  const key = vis.map(v => v.at).join(',');
+  if (key === PHS.key) return; PHS.key = key;
+  const msgs = vis.filter(v => !v.typing);
+  if (msgs.length > PHS.count) { const m = msgs[msgs.length - 1]; m.sys ? 0 : m.me ? SFX.send() : SFX.pop(); }
+  PHS.count = msgs.length;
+  UI.phMsgs.innerHTML = vis.map(v => v.typing ? '<div class="typing"><i></i><i></i><i></i></div>' : `<div class="msg ${v.sys ? 'sys' : v.me ? 'me' : 'them'}">${v.text}</div>`).join('');
+}
+/* hotspots: DOM markers projected from 3D anchors */
+const HOTS = [];
+function buildHotspots() {
+  SC.forEach((S, si) => (S.hot || []).forEach(h => {
+    const el = document.createElement('button'); el.className = 'hs'; el.setAttribute('aria-label', h.label); el.innerHTML = `<span>${h.label}</span>`;
+    el.addEventListener('pointerdown', e => e.stopPropagation());
+    el.addEventListener('click', e => { e.stopPropagation(); if (cur === si) { h.act(SC[si].st, sT); el.classList.remove('on'); } });
+    UI.hots.appendChild(el); HOTS.push({ si, h, el, on: false });
+  }));
+}
+const _pv = V();
+function updateHotspots() {
+  HOTS.forEach(H => {
+    const S = SC[H.si]; let on = !trans && H.si === cur && H.h.when(sT, S.st);
+    if (on) { _pv.copy(H.h.pos()).project(camera); if (_pv.z > 1 || Math.abs(_pv.x) > 1.05 || Math.abs(_pv.y) > 1.05) on = false; else H.el.style.transform = `translate(${(_pv.x * 0.5 + 0.5) * innerWidth}px,${(-_pv.y * 0.5 + 0.5) * innerHeight}px)`; }
+    if (on !== H.on) { H.on = on; H.el.classList.toggle('on', on); H.el.classList.toggle('label', on); setTimeout(() => H.el.classList.remove('label'), 3500); }
+  });
+}
+
+/* ---------- input ---------- */
+let wheelAcc = 0, wheelLock = 0, wheelTm = 0;
+addEventListener('wheel', e => { e.preventDefault(); if (!started) return; const now = performance.now(); clearTimeout(wheelTm); wheelTm = setTimeout(() => (wheelAcc = 0), 260); if (now < wheelLock) return; wheelAcc += e.deltaY + e.deltaX; if (Math.abs(wheelAcc) > 90) { go(cur + Math.sign(wheelAcc)); wheelAcc = 0; wheelLock = now + 1400; } }, { passive: false });
+addEventListener('keydown', e => { if (!started) return; if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(cur + 1); } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(cur - 1); } else if (e.key === 'm' || e.key === 'M') toggleMute(); else if (e.key === 'Escape') hideInfo(); });
+let touch0 = null;
+addEventListener('touchstart', e => { const t = e.touches[0]; touch0 = { x: t.clientX, y: t.clientY, t: performance.now() }; }, { passive: true });
+addEventListener('touchmove', e => { const t = e.touches[0]; par.tx = (t.clientX / innerWidth) * 2 - 1; par.ty = (t.clientY / innerHeight) * 2 - 1; }, { passive: true });
+addEventListener('touchend', e => { if (!touch0 || !started) return; const t = e.changedTouches[0], dx = t.clientX - touch0.x, dy = t.clientY - touch0.y, dtm = performance.now() - touch0.t; touch0 = null; if (dtm < 900 && Math.max(Math.abs(dx), Math.abs(dy)) > 60) { const d = Math.abs(dy) > Math.abs(dx) ? dy : dx; go(cur + (d < 0 ? 1 : -1)); } }, { passive: true });
+addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { par.tx = (e.clientX / innerWidth) * 2 - 1; par.ty = (e.clientY / innerHeight) * 2 - 1; } });
+const ray = new THREE.Raycaster(), _m = new THREE.Vector2();
+renderer.domElement.addEventListener('click', e => {
+  if (UI.info.classList.contains('on') && performance.now() - infoAt > 300) { hideInfo(); return; }
+  if (cur === 0 && SC[0].st && SC[0].st.realise == null && !trans) { _m.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(_m, camera); if (ray.intersectObject(ADAM.root, true).length) SC[0].st.realise = sT; }
+});
+UI.info.addEventListener('click', hideInfo);
+UI.prev.addEventListener('click', () => go(cur - 1));
+UI.next.addEventListener('click', () => go(cur + 1));
+UI.again.addEventListener('click', () => { if (!trans) trans = { type: 'fade', t: 0, to: 0, sw: false }; });
+function toggleMute() { setMute(!AU.muted); UI.mute.setAttribute('aria-label', AU.muted ? 'Unmute sound' : 'Mute sound'); $('muteIcon').innerHTML = AU.muted ? '<path d="M2 6h3l4-3v10L5 10H2z"/><path d="m11 6 4 4m0-4-4 4"/>' : '<path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11.5 5.5a3.5 3.5 0 0 1 0 5M13 3.5a6 6 0 0 1 0 9"/>'; }
+UI.mute.addEventListener('click', toggleMute);
+addEventListener('resize', onResize);
+function onResize() { const w = innerWidth, h = innerHeight; camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); composer.setSize(w, h); grade.uniforms.res.value.set(w, h); }
+function setPR(pr) { pixelRatio = pr; renderer.setPixelRatio(pr); composer.setPixelRatio(pr); onResize(); moteList.forEach(m => (m.uniforms.pr.value = pr)); }
+addEventListener('visibilitychange', () => { last = performance.now(); if (AU.ctx) document.hidden ? AU.ctx.suspend() : AU.ctx.resume(); });
+
+/* ---------- main loop ---------- */
+let perfAcc = 0, perfN = 0, perfT = 0;
+const maxPR = pixelRatio;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000)); last = now; gT += dt;
+  if (!started) return;
+  /* adaptive resolution keeps the film smooth on slower devices */
+  perfAcc += dt; perfN++; perfT += dt;
+  if (perfT > 2.5) { const avg = perfAcc / perfN; if (avg > 1 / 40 && pixelRatio > 0.75) setPR(Math.max(0.75, pixelRatio - 0.25)); else if (avg < 1 / 57 && pixelRatio < maxPR) setPR(Math.min(maxPR, pixelRatio + 0.25)); perfAcc = perfN = perfT = 0; }
+  let fade = 0;
+  if (trans && trans.type === 'fade') {
+    trans.t += dt;
+    if (trans.t < 1.0) fade = easeS(trans.t / 1.0);
+    else { if (!trans.sw) { enterScene(trans.to); trans.sw = true; } fade = 1 - easeS((trans.t - 1.0) / 1.5); if (trans.t > 2.5) trans = null; }
+  }
+  const S = SC[cur], st = S.st, hold = trans && trans.type === 'dolly';
+  if (!hold) sT += dt;
+  S.update(sT, dt, st);
+  /* sound effects keyed to the timeline */
+  (S.sfx || []).forEach(([t, n]) => { if (S.prevT < t && sT >= t) SFX[n](); }); S.prevT = sT;
+  /* camera */
+  const c = camAt(S, sT); showSet(c.set);
+  if (hold) { trans.t += dt; const u = easeIO(clamp(trans.t / trans.dur)); trans.curve.getPoint(u, camP); camL.copy(trans.l0).lerp(trans.l1, u); camFov = lerp(trans.f0, trans.f1, u); if (trans.t >= trans.dur) trans = null; }
+  else { camP.copy(c.p); camL.copy(c.l); camFov = c.fov; }
+  if (camOverride) { camP.copy(camOverride.p); camL.copy(camOverride.l); }
+  if (trans && trans.type === 'fade' && !trans.sw) camP.lerp(camL, easeS(trans.t) * 0.1);
+  par.x += (par.tx - par.x) * Math.min(1, dt * 2.2); par.y += (par.ty - par.y) * Math.min(1, dt * 2.2);
+  _v.subVectors(camL, camP); const dist = _v.length(); const right = V().crossVectors(_v, camera.up).normalize();
+  const amp = Math.min(0.35, dist * 0.035);
+  camera.position.copy(camP).addScaledVector(right, par.x * amp).addScaledVector(camera.up, -par.y * amp * 0.6);
+  camera.position.y += Math.sin(gT * 0.7) * 0.012; camera.position.x += Math.sin(gT * 0.53) * 0.01;
+  camera.lookAt(camL.x + par.x * amp * 0.25, camL.y - par.y * amp * 0.15, camL.z);
+  camera.rotateZ(Math.sin(gT * 0.21) * 0.006);
+  if (camera.fov !== camFov) { camera.fov = camFov; camera.updateProjectionMatrix(); }
+  sky.position.copy(camera.position);
+  applyEnv(S.env(sT, st), camL);
+  /* overlays */
+  const dip = trans ? 0 : c.dip;
+  UI.fade.style.opacity = Math.max(fade, dip, S.fade ? S.fade(sT) : 0).toFixed(3);
+  UI.flash.style.opacity = (S.flash ? S.flash(sT) : 0).toFixed(3);
+  /* audio */
+  setLevels(trans && trans.type === 'fade' && !trans.sw ? scaleLv(S.audio(sT, st), 1 - fade) : S.audio(sT, st)); audioTick(dt);
+  /* text */
+  setText(UI.narr, S.narr ? S.narr(sT, st) : '');
+  setSub((S.subs || []).find(s => sT >= s[0] && sT < s[1]) || null);
+  setText(UI.cap, S.cap ? S.cap(sT, st) : '');
+  renderPhone(S.phone ? S.phone(sT, st) : null);
+  updateHotspots();
+  UI.bars.forEach((b, i) => (b.style.width = (i < cur ? 100 : i > cur ? 0 : Math.min(100, (sT / S.dur) * 100)) + '%'));
+  if (cur < SC.length - 1 && sT > S.dur - 2) UI.next.classList.add('pulse');
+  UI.hint.style.opacity = cur === 0 && sT < 14 ? 1 : 0;
+  if (S.final) { const f = S.final(sT); const els = UI.final.children; [61.5, 63, 64.5, 67, 68.5, 77].forEach((tt, i) => els[i].classList.toggle('on', f > tt)); }
+  /* GPU-animated materials */
+  skyU.time.value = gT; grade.uniforms.time.value = gT;
+  moteList.forEach(m => (m.uniforms.time.value = gT)); waterMats.forEach(m => (m.uniforms.time.value = gT));
+  composer.render();
+}
+const scaleLv = (L, k) => { const o = {}; for (const n in L) o[n] = n === 'clubCut' ? L[n] : L[n] * k; return o; };
+
+/* ---------- boot ---------- */
+const loadB = document.querySelector('#loadBar b');
+const tick = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+function fail(msg) { const e = $('err'); e.style.display = 'block'; e.textContent = 'Something went wrong while preparing the film: ' + msg; }
+addEventListener('error', e => fail(e.message || String(e)));
+async function boot() {
+  loaderFx();
+  try {
+    loadB.style.width = '6%';
+    await Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2500))]);
+    buildTextures(); buildFacades(); buildSalahPoses(); buildSalahSeq(); buildPalettes(); loadB.style.width = '20%'; await tick();
+    SETS.club = buildClub(); loadB.style.width = '32%'; await tick();
+    SETS.street = buildStreet(); SETS.street.lampsSorted = [...SETS.street.lamps].sort((a, b) => a.x - b.x); loadB.style.width = '44%'; await tick();
+    SETS.road = buildRoad(); loadB.style.width = '52%'; await tick();
+    SETS.mosque = buildMosque(); loadB.style.width = '66%'; await tick();
+    SETS.home = buildHome(); loadB.style.width = '74%'; await tick();
+    buildCast(); SC.forEach(prepScene); buildHotspots();
+    /* pre-compile shaders for each set so scene changes don't stutter */
+    const names = Object.keys(SETS);
+    for (let i = 0; i < names.length; i++) { showSet(names[i]); camera.position.copy(SETS[names[i]].G.position).add(V(0, 3, 10)); camera.lookAt(SETS[names[i]].G.position); renderer.compile(scene, camera); loadB.style.width = (76 + (i + 1) * 4) + '%'; await tick(); }
+    enterScene(0); SC[0].update(0, 0.016, SC[0].st); const c = camAt(SC[0], 0); camP.copy(c.p); camL.copy(c.l); showSet(c.set);
+    loadB.style.width = '100%';
+    const b = $('start'); b.classList.add('ready'); b.focus({ preventScroll: true });
+    b.addEventListener('click', () => {
+      audioInit(); started = true; last = performance.now(); sT = 0; enterScene(0);
+      $('loader').classList.add('out'); UI.hud.classList.add('on'); UI.fade.style.opacity = 1;
+      trans = { type: 'fade', t: 1.0, to: 0, sw: true };
+    }, { once: true });
+  } catch (err) { console.error(err); fail(err.message); }
+  requestAnimationFrame(frame);
+}
+/* soft geometric shimmer behind the title screen */
+function loaderFx() {
+  const c = $('loaderFx'), g = c.getContext('2d'); let w, h; const rs = () => { w = c.width = innerWidth; h = c.height = innerHeight; }; rs(); addEventListener('resize', rs);
+  const pts = Array.from({ length: 60 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() }));
+  (function draw(t) { if ($('loader').classList.contains('out')) return; g.clearRect(0, 0, w, h);
+    pts.forEach(p => { const y = (p.y - t * 0.00002 * (0.3 + p.s)) % 1; const yy = (y < 0 ? y + 1 : y) * h; g.fillStyle = `rgba(232,204,144,${0.15 + 0.35 * p.s * (0.5 + 0.5 * Math.sin(t * 0.001 + p.s * 20))})`; g.beginPath(); g.arc(p.x * w, yy, 0.6 + p.s * 1.6, 0, TAU); g.fill(); });
+    requestAnimationFrame(draw); })(0);
+}
+/* small hook for automated checks: window.__wayback.jump(sceneIndex, seconds) */
+window.__wayback = { jump(i, t) { trans = null; enterScene(i); sT = t; SC[i].prevT = t; }, state: () => ({ cur, sT, pr: pixelRatio }), cam(p, l) { camOverride = p ? { p: V(...p).add(SETS[l[3]].G.position), l: V(l[0], l[1], l[2]).add(SETS[l[3]].G.position) } : null; } };
+boot();
+</script>
+</body>
+</html>
